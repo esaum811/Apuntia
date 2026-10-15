@@ -1,0 +1,40 @@
+# ----- Compilación y Gradle -----
+*.iml
+.gradle/
+.kotlin/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# ----- Android Studio / IDE -----
+# Se versionan solo los ajustes compartidos del proyecto
+.idea/*
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+local.properties
+
+# ----- Editores ajenos al proyecto (Android Studio es el único IDE) -----
+.vscode/
+
+# ----- Llaves y secretos: NUNCA al repositorio -----
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+google-services.json
+
+# ----- Datos de la app y respaldos -----
+*.apuntia
+*.db
+*.db-shm
+*.db-wal
+
+# ----- Registros y temporales -----
+*.log
+.DS_Store
+Thumbs.db

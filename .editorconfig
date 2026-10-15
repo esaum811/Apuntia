@@ -1,0 +1,29 @@
+# Reglas de formato de Apuntia.
+# Las leen Android Studio, ktlint y cualquier editor compatible con EditorConfig.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# Kotlin: estilo oficial de Android y reglas de ktlint
+[*.{kt,kts}]
+ktlint_code_style = android_studio
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+ij_kotlin_imports_layout = *
+# Las funciones @Composable se escriben en PascalCase
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# Archivos de recursos y configuración
+[*.{xml,json,yml,yaml,toml}]
+indent_size = 2
+
+# En Markdown dos espacios al final son un salto de línea
+[*.md]
+trim_trailing_whitespace = false
