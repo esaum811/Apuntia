@@ -1,0 +1,29 @@
+# Reglas de Apuntia. Se suman a las reglas por defecto de detekt.
+# Basadas en docs/ESTANDARES_CODIGO.md.
+
+comments:
+  UndocumentedPublicClass:
+    active: true
+    excludes: [ '**/test/**', '**/androidTest/**' ]
+  UndocumentedPublicFunction:
+    active: true
+    excludes: [ '**/test/**', '**/androidTest/**' ]
+
+complexity:
+  LongMethod:
+    active: true
+    allowedLines: 40
+    ignoreAnnotated: [ 'Composable' ]
+
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: [ 'Composable' ]
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  MagicNumber:
+    active: true
+    ignoreAnnotated: [ 'Composable' ]

@@ -13,13 +13,13 @@ import androidx.compose.ui.platform.LocalContext
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
     secondary = PurpleGrey80,
-    tertiary = Pink80
+    tertiary = Pink80,
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
-    tertiary = Pink40
+    tertiary = Pink40,
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -32,12 +32,19 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+/**
+ * Tema visual de Apuntia (colores y tipografía de Material 3).
+ *
+ * @param darkTheme indica si se usa el modo oscuro.
+ * @param dynamicColor indica si se usan los colores dinámicos del sistema (Android 12 o superior).
+ * @param content contenido de la interfaz al que se aplica el tema.
+ */
 @Composable
 fun ApuntiaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
@@ -52,6 +59,6 @@ fun ApuntiaTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = content,
     )
 }
