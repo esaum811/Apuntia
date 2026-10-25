@@ -1,97 +1,92 @@
 package com.apuntia.app.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.apuntia.app.R
 
-/**
- * Familia tipográfica Nunito, incluida dentro de la app (res/font) para que
- * funcione sin conexión a internet.
- */
-internal val nunitoFamily = FontFamily(
-    Font(R.font.nunito_regular, FontWeight.Normal),
-    Font(R.font.nunito_semibold, FontWeight.SemiBold),
-    Font(R.font.nunito_bold, FontWeight.Bold),
-    Font(R.font.nunito_extrabold, FontWeight.ExtraBold),
+private const val WIDTH_CONDENSED = 75f
+private const val WIDTH_NORMAL = 100f
+
+/** Crea una variante de la fuente variable con el peso y el ancho indicados. */
+@OptIn(ExperimentalTextApi::class)
+private fun bricolage(weight: FontWeight, width: Float): Font = Font(
+    resId = R.font.bricolage_grotesque,
+    weight = weight,
+    variationSettings = FontVariation.Settings(
+        FontVariation.weight(weight.weight),
+        FontVariation.width(width),
+    ),
 )
 
-private val baseTypography = Typography()
+// Títulos: letras condensadas y muy gruesas.
+private val displayFamily = FontFamily(
+    bricolage(FontWeight.Bold, WIDTH_CONDENSED),
+    bricolage(FontWeight.ExtraBold, WIDTH_CONDENSED),
+)
 
-/** Aplica Nunito a un estilo de texto de Material sin cambiar el resto de sus valores. */
-private fun TextStyle.withNunito(): TextStyle = copy(fontFamily = nunitoFamily)
+// Texto corrido: ancho normal.
+private val textFamily = FontFamily(
+    bricolage(FontWeight.Medium, WIDTH_NORMAL),
+    bricolage(FontWeight.Bold, WIDTH_NORMAL),
+    bricolage(FontWeight.ExtraBold, WIDTH_NORMAL),
+)
 
-/**
- * Tipografía de Apuntia.
- *
- * Los estilos que se usan en el diseño aprobado están definidos a mano; los demás
- * conservan las medidas de Material 3 pero con la fuente Nunito.
- */
+/** Escala tipográfica de Apuntia, tomada de los bocetos "Papel de colores". */
 internal val apuntiaTypography = Typography(
-    displayLarge = baseTypography.displayLarge.withNunito(),
-    displayMedium = baseTypography.displayMedium.withNunito(),
-    displaySmall = baseTypography.displaySmall.withNunito(),
-    // Títulos de pantalla ("Mis notas", "Tareas")
+    displayLarge = TextStyle(
+        fontFamily = displayFamily, fontWeight = FontWeight.ExtraBold,
+        fontSize = 60.sp, lineHeight = 54.sp, letterSpacing = (-0.02).em,
+    ),
     headlineLarge = TextStyle(
-        fontFamily = nunitoFamily,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 30.sp,
-        lineHeight = 36.sp,
+        fontFamily = displayFamily, fontWeight = FontWeight.ExtraBold,
+        fontSize = 46.sp, lineHeight = 45.sp, letterSpacing = (-0.015).em,
     ),
-    headlineMedium = baseTypography.headlineMedium.withNunito(),
-    headlineSmall = baseTypography.headlineSmall.withNunito(),
-    // Título de la barra superior y de las tarjetas grandes
+    headlineMedium = TextStyle(
+        fontFamily = displayFamily, fontWeight = FontWeight.ExtraBold,
+        fontSize = 38.sp, lineHeight = 38.sp, letterSpacing = (-0.015).em,
+    ),
     titleLarge = TextStyle(
-        fontFamily = nunitoFamily,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
+        fontFamily = displayFamily, fontWeight = FontWeight.ExtraBold,
+        fontSize = 26.sp, lineHeight = 26.sp, letterSpacing = (-0.01).em,
     ),
-    // Título de cada nota o tarea en la lista
     titleMedium = TextStyle(
-        fontFamily = nunitoFamily,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 18.sp,
-        lineHeight = 24.sp,
+        fontFamily = displayFamily, fontWeight = FontWeight.ExtraBold,
+        fontSize = 24.sp, lineHeight = 25.sp, letterSpacing = (-0.01).em,
     ),
-    titleSmall = baseTypography.titleSmall.withNunito(),
-    // Texto de las notas
     bodyLarge = TextStyle(
-        fontFamily = nunitoFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 17.sp,
-        lineHeight = 26.sp,
+        fontFamily = textFamily, fontWeight = FontWeight.Medium,
+        fontSize = 17.sp, lineHeight = 26.sp,
     ),
-    // Vista previa y textos secundarios
     bodyMedium = TextStyle(
-        fontFamily = nunitoFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 15.sp,
-        lineHeight = 21.sp,
+        fontFamily = textFamily, fontWeight = FontWeight.Medium,
+        fontSize = 15.sp, lineHeight = 21.sp,
     ),
-    bodySmall = baseTypography.bodySmall.withNunito(),
-    // Botones
     labelLarge = TextStyle(
-        fontFamily = nunitoFamily,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 16.sp,
-        lineHeight = 22.sp,
+        fontFamily = textFamily, fontWeight = FontWeight.ExtraBold,
+        fontSize = 20.sp, lineHeight = 24.sp,
     ),
-    // Chips de categoría y fechas
     labelMedium = TextStyle(
-        fontFamily = nunitoFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 13.sp,
-        lineHeight = 16.sp,
+        fontFamily = textFamily, fontWeight = FontWeight.Bold,
+        fontSize = 14.sp, lineHeight = 18.sp,
     ),
-    // Etiquetas de la barra inferior
     labelSmall = TextStyle(
-        fontFamily = nunitoFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
+        fontFamily = textFamily, fontWeight = FontWeight.Bold,
+        fontSize = 12.sp, lineHeight = 16.sp,
     ),
+)
+
+/** Estilo de la hora gigante de la pantalla de alarma. */
+val alarmTimeStyle: TextStyle = TextStyle(
+    fontFamily = displayFamily,
+    fontWeight = FontWeight.ExtraBold,
+    fontSize = 168.sp,
+    lineHeight = 134.sp,
+    letterSpacing = (-0.03).em,
 )

@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room3)
 }
 
 android {
@@ -54,6 +56,10 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.room3.runtime)
+    ksp(libs.room3.compiler)
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.sqlite)
 }
 
 // Ktlint: formato de código según .editorconfig y la guía de Android.
@@ -65,4 +71,10 @@ ktlint {
 detekt {
     buildUponDefaultConfig = true
     config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+}
+
+// Room guarda aquí el esquema de la base de datos en cada versión.
+// Sirve para probar las migraciones, y esta carpeta sí se sube a Git.
+room3 {
+    schemaDirectory("$projectDir/schemas")
 }
