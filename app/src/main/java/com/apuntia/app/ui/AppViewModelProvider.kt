@@ -1,0 +1,29 @@
+package com.apuntia.app.ui
+
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.createSavedStateHandle
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.apuntia.app.ApuntiaApplication
+import com.apuntia.app.di.AppContainer
+import com.apuntia.app.ui.editor.EditorViewModel
+import com.apuntia.app.ui.navigation.Routes
+import com.apuntia.app.ui.notes.NotesViewModel
+
+private fun CreationExtras.container(): AppContainer = (this[APPLICATION_KEY] as ApuntiaApplication).container
+
+/** Crea los ViewModel de las pantallas entregándoles los repositorios que necesitan. */
+object AppViewModelProvider {
+    /** Fábrica que se pasa a `viewModel(factory = ...)` en cada pantalla. */
+    val Factory = viewModelFactory {
+        initializer { NotesViewModel(container().entries, container().categories) }
+        initializer {
+            EditorViewModel(
+                entryId = createSavedStateHandle()[Routes.ENTRY_ID_ARG],
+                entries = container().entries,
+                categories = container().categories,
+            )
+        }
+    }
+}

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_notes">Notas</string>
+    <string name="nav_tasks">Tareas</string>
+    <string name="nav_alarms">Alarmas</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="nav_new_entry">Nueva nota</string>
+
+    <string name="notes_title">Mis notas</string>
+    <string name="filter_all">Todas</string>
+    <string name="empty_notes_title">Aún no tienes notas</string>
+    <string name="empty_notes_hint">Crea la primera y ordénala por colores.</string>
+    <string name="empty_notes_action">Crear nota</string>
+    <string name="date_today">Hoy, %1$s</string>
+    <string name="date_yesterday">Ayer</string>
+
+    <string name="editor_new_title">Nueva nota</string>
+    <string name="editor_edit_title">Editar nota</string>
+    <string name="editor_back">Volver</string>
+    <string name="editor_save">Guardar</string>
+    <string name="editor_type_note">Nota</string>
+    <string name="editor_type_task">Tarea</string>
+    <string name="editor_title_label">Título</string>
+    <string name="editor_body_label">Nota</string>
+    <string name="editor_category_label">Categoría</string>
+    <string name="editor_trash">Mover a la papelera</string>
+
+    <string name="coming_soon">Esta sección llega pronto</string>
+</resources>
