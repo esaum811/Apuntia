@@ -23,6 +23,7 @@ import androidx.navigation.navArgument
 import com.apuntia.app.ApuntiaApplication
 import com.apuntia.app.R
 import com.apuntia.app.di.DatabaseStatus
+import com.apuntia.app.domain.model.EntryType
 import com.apuntia.app.ui.common.ComingSoonScreen
 import com.apuntia.app.ui.common.StartupErrorScreen
 import com.apuntia.app.ui.components.ApuntiaDock
@@ -30,6 +31,7 @@ import com.apuntia.app.ui.components.ApuntiaIcons
 import com.apuntia.app.ui.components.DockItem
 import com.apuntia.app.ui.editor.EditorScreen
 import com.apuntia.app.ui.notes.NotesScreen
+import com.apuntia.app.ui.tasks.TasksScreen
 
 private val mainRoutes = listOf(Routes.NOTES, Routes.TASKS, Routes.ALARMS, Routes.SETTINGS)
 
@@ -59,8 +61,13 @@ private fun ApuntiaMainContent() {
                 items = dockItems(),
                 selectedIndex = selectedIndex,
                 onSelect = { navController.navigateToMain(mainRoutes[it]) },
-                onAdd = { navController.navigate(Routes.editor()) { launchSingleTop = true } },
-                addDescription = stringResource(R.string.nav_new_entry),
+                onAdd = {
+                    val type = if (route == Routes.TASKS) EntryType.TASK else null
+                    navController.navigate(Routes.editor(type = type)) { launchSingleTop = true }
+                },
+                addDescription = stringResource(
+                    if (route == Routes.TASKS) R.string.nav_new_task else R.string.nav_new_entry,
+                ),
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding(),
             )
         }
@@ -84,13 +91,20 @@ private fun ApuntiaNavHost(navController: NavHostController) {
                 onCreate = { navController.navigate(Routes.editor()) { launchSingleTop = true } },
             )
         }
-        composable(Routes.TASKS) { ComingSoonScreen(stringResource(R.string.nav_tasks)) }
+        composable(Routes.TASKS) {
+            TasksScreen(onOpenEntry = { navController.navigate(Routes.editor(it)) { launchSingleTop = true } })
+        }
         composable(Routes.ALARMS) { ComingSoonScreen(stringResource(R.string.nav_alarms)) }
         composable(Routes.SETTINGS) { ComingSoonScreen(stringResource(R.string.nav_settings)) }
         composable(
             Routes.EDITOR,
             arguments = listOf(
                 navArgument(Routes.ENTRY_ID_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument(Routes.TYPE_ARG) {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null

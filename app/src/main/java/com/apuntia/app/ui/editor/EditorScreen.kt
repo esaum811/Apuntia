@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -50,6 +51,7 @@ import com.apuntia.app.ui.AppViewModelProvider
 import com.apuntia.app.ui.components.ApuntiaIcons
 import com.apuntia.app.ui.components.CategoryChip
 import com.apuntia.app.ui.components.CategoryShapeIcon
+import com.apuntia.app.ui.common.dueDateLabel
 import com.apuntia.app.ui.components.SegmentedControl
 import com.apuntia.app.ui.theme.ApuntiaTheme
 import com.apuntia.app.ui.theme.cardInk
@@ -94,6 +96,9 @@ fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(fac
             EditorCard(category, viewModel)
         }
         CategoryPicker(state, viewModel::selectCategory)
+        if (state.type == EntryType.TASK) {
+            DueDateRow(state.dueAt, onChange = viewModel::setDueAt)
+        }
         if (state.isEditing) {
             Box(
                 Modifier
@@ -234,6 +239,53 @@ private fun CategoryPicker(state: EditorUiState, onSelect: (String) -> Unit) {
                     onClick = { onSelect(category.id) },
                     shape = category.shape,
                     color = Color(category.color),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DueDateRow(dueAt: Long?, onChange: (Long?) -> Unit) {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(scheme.surfaceVariant, RoundedCornerShape(22.dp))
+            .padding(start = 16.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            Modifier
+                .weight(1f)
+                .defaultMinSize(minHeight = 64.dp)
+                .clickable(role = Role.Button) { showDueDatePicker(context, dueAt, onChange) },
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                stringResource(R.string.editor_due_label),
+                style = MaterialTheme.typography.labelSmall,
+                color = scheme.onSurfaceVariant,
+            )
+            Text(
+                if (dueAt == null) stringResource(R.string.editor_due_none) else dueDateLabel(dueAt),
+                style = MaterialTheme.typography.bodyLarge,
+                color = scheme.onBackground,
+            )
+        }
+        if (dueAt != null) {
+            Box(
+                Modifier
+                    .defaultMinSize(minHeight = 48.dp)
+                    .clickable(role = Role.Button) { onChange(null) }
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(R.string.editor_due_clear),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.onBackground,
                 )
             }
         }

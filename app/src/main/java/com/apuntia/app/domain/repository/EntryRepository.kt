@@ -23,6 +23,9 @@ interface EntryRepository {
      */
     suspend fun save(entry: Entry)
 
+    /** Marca una tarea como terminada o pendiente. */
+    suspend fun setDone(id: String, isDone: Boolean)
+
     /** Envía una entrada a la papelera. */
     suspend fun moveToTrash(id: String)
 

@@ -29,6 +29,7 @@ private const val TAG = "Apuntia"
  * @property type nota o tarea.
  * @property categoryId categoría elegida.
  * @property categories categorías disponibles.
+ * @property dueAt fecha límite de la tarea (milisegundos UTC), o nulo si no tiene.
  * @property isSaving verdadero mientras se guarda; evita guardar dos veces con un doble toque.
  * @property isFinished verdadero cuando terminó de guardar o borrar y hay que cerrar el editor.
  * @property hasError verdadero si no se pudo guardar y hay que avisar al usuario.
@@ -39,6 +40,7 @@ data class EditorUiState(
     val type: EntryType = EntryType.NOTE,
     val categoryId: String = "",
     val categories: List<Category> = emptyList(),
+    val dueAt: Long? = null,
     val isSaving: Boolean = false,
     val isFinished: Boolean = false,
     val hasError: Boolean = false,
@@ -48,9 +50,11 @@ data class EditorUiState(
  * Crea una nota nueva o edita una existente.
  *
  * @param entryId id de la nota a editar, o nulo para crear una nueva.
+ * @param initialType tipo con el que se abre una entrada nueva, o nulo para nota.
  */
 class EditorViewModel(
     private val entryId: String?,
+    private val initialType: EntryType?,
     private val entries: EntryRepository,
     categories: CategoryRepository,
 ) : ViewModel() {
@@ -77,9 +81,10 @@ class EditorViewModel(
                 mutableState.value = EditorUiState(
                     isLoaded = true,
                     isEditing = entry != null,
-                    type = entry?.type ?: EntryType.NOTE,
+                    type = entry?.type ?: initialType ?: EntryType.NOTE,
                     categoryId = entry?.categoryId ?: allCategories.firstOrNull()?.id.orEmpty(),
                     categories = allCategories,
+                    dueAt = entry?.dueAt,
                 )
             }
         }
@@ -87,6 +92,9 @@ class EditorViewModel(
 
     /** Cambia entre nota y tarea. */
     fun selectType(type: EntryType) = mutableState.update { it.copy(type = type) }
+
+    /** Cambia la fecha límite de la tarea; nulo la quita. */
+    fun setDueAt(millis: Long?) = mutableState.update { it.copy(dueAt = millis) }
 
     /** Cambia la categoría de la nota. */
     fun selectCategory(id: String) = mutableState.update { it.copy(categoryId = id) }
@@ -103,7 +111,10 @@ class EditorViewModel(
         // La entrada nueva se crea una sola vez; si el guardado falla y se reintenta, conserva su id.
         val base = existing ?: newEntry(state.categoryId).also { existing = it }
         runSaving {
-            entries.save(base.copy(title = title, body = body, type = state.type, categoryId = state.categoryId))
+            val dueAt = if (state.type == EntryType.TASK) state.dueAt else null
+            entries.save(
+                base.copy(title = title, body = body, type = state.type, categoryId = state.categoryId, dueAt = dueAt),
+            )
         }
     }
 

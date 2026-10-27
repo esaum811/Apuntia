@@ -40,6 +40,10 @@ interface EntryDao {
     @Upsert
     suspend fun upsert(entry: EntryEntity)
 
+    /** Marca una tarea como terminada o pendiente y actualiza su fecha de modificación. */
+    @Query("UPDATE entries SET isDone = :isDone, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun setDone(id: String, isDone: Boolean, updatedAt: Long)
+
     /** Envía una entrada a la papelera marcando el momento [deletedAt]. */
     @Query("UPDATE entries SET deletedAt = :deletedAt WHERE id = :id")
     suspend fun moveToTrash(id: String, deletedAt: Long)

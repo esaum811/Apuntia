@@ -38,6 +38,8 @@ class RoomEntryRepository(
         dao.upsert(entry.copy(updatedAt = clock()).toEntity())
     }
 
+    override suspend fun setDone(id: String, isDone: Boolean) = dao.setDone(id, isDone, clock())
+
     override suspend fun moveToTrash(id: String) = dao.moveToTrash(id, clock())
 
     override suspend fun restore(id: String) = dao.restore(id)

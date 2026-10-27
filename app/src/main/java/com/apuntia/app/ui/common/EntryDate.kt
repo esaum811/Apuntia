@@ -25,3 +25,18 @@ fun entryDateLabel(millis: Long): String {
         else -> dayFormatter.format(date)
     }
 }
+
+private val weekdayFormatter = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault())
+
+/** Texto de una fecha límite: "Hoy, 4:30 p. m.", "Mañana, 9:00 a. m." o "dom 18 oct". */
+@Composable
+fun dueDateLabel(millis: Long): String {
+    val zone = ZoneId.systemDefault()
+    val date = Instant.ofEpochMilli(millis).atZone(zone)
+    val today = LocalDate.now(zone)
+    return when (date.toLocalDate()) {
+        today -> stringResource(R.string.date_today, timeFormatter.format(date))
+        today.plusDays(1) -> stringResource(R.string.date_tomorrow, timeFormatter.format(date))
+        else -> weekdayFormatter.format(date)
+    }
+}

@@ -7,9 +7,11 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.apuntia.app.ApuntiaApplication
 import com.apuntia.app.di.AppContainer
+import com.apuntia.app.domain.model.EntryType
 import com.apuntia.app.ui.editor.EditorViewModel
 import com.apuntia.app.ui.navigation.Routes
 import com.apuntia.app.ui.notes.NotesViewModel
+import com.apuntia.app.ui.tasks.TasksViewModel
 
 private fun CreationExtras.container(): AppContainer = (this[APPLICATION_KEY] as ApuntiaApplication).container
 
@@ -18,9 +20,11 @@ object AppViewModelProvider {
     /** Fábrica que se pasa a `viewModel(factory = ...)` en cada pantalla. */
     val Factory = viewModelFactory {
         initializer { NotesViewModel(container().entries, container().categories) }
+        initializer { TasksViewModel(container().entries, container().categories) }
         initializer {
             EditorViewModel(
                 entryId = createSavedStateHandle()[Routes.ENTRY_ID_ARG],
+                initialType = EntryType.entries.firstOrNull { it.name == createSavedStateHandle()[Routes.TYPE_ARG] },
                 entries = container().entries,
                 categories = container().categories,
             )

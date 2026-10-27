@@ -1,5 +1,7 @@
 package com.apuntia.app.ui.navigation
 
+import com.apuntia.app.domain.model.EntryType
+
 /** Nombres de las pantallas para navegar entre ellas. */
 object Routes {
     /** Lista de notas (inicio). */
@@ -17,9 +19,23 @@ object Routes {
     /** Nombre del dato que lleva el id de la entrada a editar. */
     const val ENTRY_ID_ARG = "entryId"
 
-    /** Patrón de la pantalla del editor; el id es opcional (sin id se crea una nota nueva). */
-    const val EDITOR = "editor?$ENTRY_ID_ARG={$ENTRY_ID_ARG}"
+    /** Nombre del dato que lleva el tipo (nota o tarea) con el que se abre un editor nuevo. */
+    const val TYPE_ARG = "type"
 
-    /** Ruta para abrir el editor con una entrada existente, o vacío si [entryId] es nulo. */
-    fun editor(entryId: String? = null): String = if (entryId == null) "editor" else "editor?$ENTRY_ID_ARG=$entryId"
+    /** Patrón de la pantalla del editor; el id y el tipo son opcionales. */
+    const val EDITOR = "editor?$ENTRY_ID_ARG={$ENTRY_ID_ARG}&$TYPE_ARG={$TYPE_ARG}"
+
+    /**
+     * Ruta para abrir el editor.
+     *
+     * @param entryId entrada a editar, o nulo para crear una nueva.
+     * @param type tipo con el que se abre una entrada nueva, o nulo para nota.
+     */
+    fun editor(entryId: String? = null, type: EntryType? = null): String {
+        val params = listOfNotNull(
+            entryId?.let { "$ENTRY_ID_ARG=$it" },
+            type?.let { "$TYPE_ARG=${it.name}" },
+        )
+        return if (params.isEmpty()) "editor" else "editor?" + params.joinToString("&")
+    }
 }

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="nav_new_task">Nueva tarea</string>
+  <string name="date_tomorrow">Mañana, %1$s</string>
+
+  <string name="tasks_title">Tareas</string>
+  <string name="tasks_tab_pending">Pendientes</string>
+  <string name="tasks_tab_done">Hechas</string>
+  <string name="tasks_overdue">Atrasadas</string>
+  <string name="tasks_today">Hoy</string>
+  <string name="tasks_this_week">Esta semana</string>
+  <string name="tasks_later">Más adelante</string>
+  <string name="tasks_no_date">Sin fecha</string>
+  <string name="tasks_mark_done">Marcar como hecha: %1$s</string>
+  <string name="tasks_mark_pending">Marcar como pendiente: %1$s</string>
+  <string name="tasks_empty_pending_title">Sin tareas pendientes</string>
+  <string name="tasks_empty_pending_hint">Toca el botón + para agregar una tarea.</string>
+  <string name="tasks_empty_done_title">Aún no terminas ninguna</string>
+  <string name="tasks_empty_done_hint">Las tareas que marques como hechas aparecerán aquí.</string>
+
+  <string name="editor_due_label">Fecha límite</string>
+  <string name="editor_due_none">Sin fecha</string>
+  <string name="editor_due_clear">Quitar</string>
+</resources>
