@@ -51,7 +51,7 @@ fun CategoryChip(
     }
     Row(
         modifier
-            .defaultMinSize(minHeight = 44.dp)
+            .defaultMinSize(minHeight = 48.dp)
             .background(background, ChipShape)
             .selectable(selected = selected, role = Role.Tab, onClick = onClick)
             .padding(horizontal = 12.dp),

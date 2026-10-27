@@ -2,6 +2,7 @@ package com.apuntia.app.ui.editor
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apuntia.app.core.IdGenerator
@@ -10,12 +11,15 @@ import com.apuntia.app.domain.model.Entry
 import com.apuntia.app.domain.model.EntryType
 import com.apuntia.app.domain.repository.CategoryRepository
 import com.apuntia.app.domain.repository.EntryRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+private const val TAG = "Apuntia"
 
 /**
  * Lo que el editor necesita para dibujarse (el texto vive aparte, en [EditorViewModel.titleState]).
@@ -25,6 +29,9 @@ import kotlinx.coroutines.launch
  * @property type nota o tarea.
  * @property categoryId categoría elegida.
  * @property categories categorías disponibles.
+ * @property isSaving verdadero mientras se guarda; evita guardar dos veces con un doble toque.
+ * @property isFinished verdadero cuando terminó de guardar o borrar y hay que cerrar el editor.
+ * @property hasError verdadero si no se pudo guardar y hay que avisar al usuario.
  */
 data class EditorUiState(
     val isLoaded: Boolean = false,
@@ -32,6 +39,9 @@ data class EditorUiState(
     val type: EntryType = EntryType.NOTE,
     val categoryId: String = "",
     val categories: List<Category> = emptyList(),
+    val isSaving: Boolean = false,
+    val isFinished: Boolean = false,
+    val hasError: Boolean = false,
 )
 
 /**
@@ -58,18 +68,20 @@ class EditorViewModel(
 
     init {
         viewModelScope.launch {
-            val allCategories = categories.observeAll().first()
-            val entry = entryId?.let { entries.get(it) }
-            existing = entry
-            titleState.setTextAndPlaceCursorAtEnd(entry?.title.orEmpty())
-            bodyState.setTextAndPlaceCursorAtEnd(entry?.body.orEmpty())
-            mutableState.value = EditorUiState(
-                isLoaded = true,
-                isEditing = entry != null,
-                type = entry?.type ?: EntryType.NOTE,
-                categoryId = entry?.categoryId ?: allCategories.firstOrNull()?.id.orEmpty(),
-                categories = allCategories,
-            )
+            guarded(onError = { mutableState.value = EditorUiState(isLoaded = true, hasError = true) }) {
+                val allCategories = categories.observeAll().first()
+                val entry = entryId?.let { entries.get(it) }
+                existing = entry
+                titleState.setTextAndPlaceCursorAtEnd(entry?.title.orEmpty())
+                bodyState.setTextAndPlaceCursorAtEnd(entry?.body.orEmpty())
+                mutableState.value = EditorUiState(
+                    isLoaded = true,
+                    isEditing = entry != null,
+                    type = entry?.type ?: EntryType.NOTE,
+                    categoryId = entry?.categoryId ?: allCategories.firstOrNull()?.id.orEmpty(),
+                    categories = allCategories,
+                )
+            }
         }
     }
 
@@ -79,25 +91,49 @@ class EditorViewModel(
     /** Cambia la categoría de la nota. */
     fun selectCategory(id: String) = mutableState.update { it.copy(categoryId = id) }
 
-    /** Guarda la nota y avisa con [onDone] cuando termina. No guarda si el título está vacío. */
-    fun save(onDone: () -> Unit) {
+    /**
+     * Guarda la nota. Al terminar, el estado queda con `isFinished` verdadero.
+     * No hace nada si el título está vacío o si ya se está guardando (doble toque).
+     */
+    fun save() {
         val title = titleState.text.toString().trim()
-        if (title.isEmpty()) return
         val state = mutableState.value
+        if (title.isEmpty() || state.categoryId.isEmpty() || state.isSaving) return
         val body = bodyState.text.toString().trim()
-        viewModelScope.launch {
-            val base = existing ?: newEntry(state.categoryId)
+        // La entrada nueva se crea una sola vez; si el guardado falla y se reintenta, conserva su id.
+        val base = existing ?: newEntry(state.categoryId).also { existing = it }
+        runSaving {
             entries.save(base.copy(title = title, body = body, type = state.type, categoryId = state.categoryId))
-            onDone()
         }
     }
 
-    /** Envía la nota a la papelera y avisa con [onDone]. Solo aplica si se está editando. */
-    fun moveToTrash(onDone: () -> Unit) {
+    /** Envía la nota a la papelera. Solo aplica si se está editando una nota existente. */
+    fun moveToTrash() {
         val id = existing?.id ?: return
+        if (mutableState.value.isSaving) return
+        runSaving { entries.moveToTrash(id) }
+    }
+
+    private fun runSaving(action: suspend () -> Unit) {
+        mutableState.update { it.copy(isSaving = true, hasError = false) }
         viewModelScope.launch {
-            entries.moveToTrash(id)
-            onDone()
+            guarded(onError = { mutableState.update { it.copy(isSaving = false, hasError = true) } }) {
+                action()
+                mutableState.update { it.copy(isFinished = true) }
+            }
+        }
+    }
+
+    // Convierte cualquier fallo de la base de datos en un aviso en pantalla en vez de cerrar la app.
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun guarded(onError: () -> Unit, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.e(TAG, "Error en el editor", error)
+            onError()
         }
     }
 

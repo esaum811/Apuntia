@@ -34,7 +34,11 @@ class DatabaseKeyProvider(context: Context) {
 
     private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    /** Devuelve la contraseña de la base de datos; si no existe todavía, la crea y la guarda. */
+    /**
+     * Devuelve la contraseña de la base de datos; si no existe todavía, la crea y la guarda.
+     * Puede lanzar una excepción si el Keystore ya no tiene la llave; quien llama debe manejarlo.
+     * Llámala fuera del hilo principal.
+     */
     fun getOrCreatePassphrase(): ByteArray {
         val stored = prefs.getString(PREF_PASSPHRASE, null)
         return if (stored != null) decrypt(stored) else createAndStore()
@@ -42,7 +46,10 @@ class DatabaseKeyProvider(context: Context) {
 
     private fun createAndStore(): ByteArray {
         val passphrase = ByteArray(PASSPHRASE_BYTES).also { SecureRandom().nextBytes(it) }
-        prefs.edit().putString(PREF_PASSPHRASE, encrypt(passphrase)).apply()
+        // commit() escribe en el momento: con apply() un cierre inesperado podría perder la contraseña
+        // después de haber creado la base de datos, y las notas quedarían ilegibles.
+        val saved = prefs.edit().putString(PREF_PASSPHRASE, encrypt(passphrase)).commit()
+        check(saved) { "No se pudo guardar la contraseña de la base de datos" }
         return passphrase
     }
 

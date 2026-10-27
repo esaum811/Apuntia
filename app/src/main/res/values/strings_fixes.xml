@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_error_title">No se pudieron abrir tus datos</string>
+    <string name="startup_error_message">Tus notas siguen guardadas en el teléfono. Intenta de nuevo; si el problema continúa, reinicia la app.</string>
+    <string name="startup_error_retry">Intentar de nuevo</string>
+    <string name="editor_error_save">No se pudo guardar. Intenta de nuevo.</string>
+</resources>

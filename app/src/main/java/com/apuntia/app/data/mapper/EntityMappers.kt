@@ -49,10 +49,24 @@ fun Entry.toEntity() = EntryEntity(
 
 /** Convierte una alarma de la base de datos en una del dominio. */
 fun ReminderEntity.toDomain() = Reminder(
-    id, entryId, label, triggerAt, repeatRule, ringtoneUri, isEnabled, createdAt,
+    id = id,
+    entryId = entryId,
+    label = label,
+    triggerAt = triggerAt,
+    repeatRule = repeatRule,
+    ringtoneUri = ringtoneUri,
+    isEnabled = isEnabled,
+    createdAt = createdAt,
 )
 
 /** Convierte una alarma del dominio en una para la base de datos. */
 fun Reminder.toEntity() = ReminderEntity(
-    id, entryId, label, triggerAt, repeatRule, ringtoneUri, isEnabled, createdAt,
+    id = id,
+    entryId = entryId,
+    label = label,
+    triggerAt = triggerAt,
+    repeatRule = repeatRule,
+    ringtoneUri = ringtoneUri,
+    isEnabled = isEnabled,
+    createdAt = createdAt,
 )

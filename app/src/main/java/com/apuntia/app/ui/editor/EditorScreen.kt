@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,7 +25,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -33,6 +37,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,8 +67,10 @@ private const val BODY_TINT = 0.4f
 @Composable
 fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(factory = AppViewModelProvider.Factory)) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // Se cierra cuando el ViewModel avisa que terminó; así no depende de funciones que se pierdan al rotar.
+    LaunchedEffect(state.isFinished) { if (state.isFinished) onClose() }
     if (!state.isLoaded) return
-    val canSave = viewModel.titleState.text.isNotBlank()
+    val canSave by remember { derivedStateOf { viewModel.titleState.text.isNotBlank() && !state.isSaving } }
     Column(
         Modifier
             .fillMaxSize()
@@ -72,21 +81,32 @@ fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(fac
             .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        EditorTopBar(state.isEditing, canSave, onBack = onClose, onSave = { viewModel.save(onClose) })
+        EditorTopBar(state.isEditing, canSave, onBack = onClose, onSave = viewModel::save)
+        if (state.hasError) {
+            Text(
+                stringResource(R.string.editor_error_save),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         TypeSelector(state.type, viewModel::selectType)
         state.categories.firstOrNull { it.id == state.categoryId }?.let { category ->
             EditorCard(category, viewModel)
         }
         CategoryPicker(state, viewModel::selectCategory)
         if (state.isEditing) {
-            Text(
-                stringResource(R.string.editor_trash),
-                modifier = Modifier
-                    .clickable(role = Role.Button) { viewModel.moveToTrash(onClose) }
-                    .padding(vertical = 12.dp),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.error,
-            )
+            Box(
+                Modifier
+                    .defaultMinSize(minHeight = 48.dp)
+                    .clickable(role = Role.Button, onClick = viewModel::moveToTrash),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Text(
+                    stringResource(R.string.editor_trash),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }
@@ -111,7 +131,7 @@ private fun EditorTopBar(isEditing: Boolean, canSave: Boolean, onBack: () -> Uni
         }
         Text(
             stringResource(if (isEditing) R.string.editor_edit_title else R.string.editor_new_title),
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+            modifier = Modifier.weight(1f).padding(horizontal = 12.dp).semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -163,16 +183,21 @@ private fun EditorCard(category: Category, viewModel: EditorViewModel) {
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            FieldLabel(stringResource(R.string.editor_title_label))
+            val titleLabel = stringResource(R.string.editor_title_label)
+            val bodyLabel = stringResource(R.string.editor_body_label)
+            FieldLabel(titleLabel)
             BasicTextField(
                 state = viewModel.titleState,
                 textStyle = MaterialTheme.typography.titleMedium.copy(color = cardInk),
                 cursorBrush = SolidColor(cardInk),
                 lineLimits = TextFieldLineLimits.SingleLine,
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 8.dp)
+                    .semantics { contentDescription = titleLabel },
             )
             Box(Modifier.fillMaxWidth().height(3.dp).background(cardInk))
-            FieldLabel(stringResource(R.string.editor_body_label), Modifier.padding(top = 14.dp))
+            FieldLabel(bodyLabel, Modifier.padding(top = 14.dp))
             BasicTextField(
                 state = viewModel.bodyState,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = cardInk),
@@ -181,7 +206,8 @@ private fun EditorCard(category: Category, viewModel: EditorViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(lerp(color, Color.White, BODY_TINT), RoundedCornerShape(14.dp))
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .semantics { contentDescription = bodyLabel },
             )
         }
     }
