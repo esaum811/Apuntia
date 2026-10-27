@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dialog_cancel">Cancelar</string>
+    <string name="notes_open_trash">Abrir la papelera</string>
+
+    <string name="tasks_clear_done">Vaciar hechas</string>
+    <string name="confirm_clear_done_title">¿Mandar las tareas hechas a la papelera?</string>
+    <string name="confirm_clear_done_message">Podrás recuperarlas desde la papelera durante 30 días.</string>
+    <string name="confirm_clear_done_action">Mandar a la papelera</string>
+
+    <string name="trash_title">Papelera</string>
+    <string name="trash_hint">Lo que está aquí se elimina para siempre a los 30 días.</string>
+    <string name="trash_empty_title">La papelera está vacía</string>
+    <string name="trash_empty_hint">Las notas y tareas que borres aparecerán aquí.</string>
+    <string name="trash_empty_action">Vaciar papelera</string>
+    <string name="trash_deleted_on">Borrada: %1$s</string>
+    <string name="trash_restore">Restaurar</string>
+    <string name="trash_delete">Eliminar</string>
+
+    <string name="confirm_delete_title">¿Eliminar para siempre?</string>
+    <string name="confirm_delete_message">Esta acción no se puede deshacer.</string>
+    <string name="confirm_delete_action">Eliminar</string>
+    <string name="confirm_empty_trash_title">¿Vaciar la papelera?</string>
+    <string name="confirm_empty_trash_message">Todo lo que hay en ella se eliminará para siempre. Esta acción no se puede deshacer.</string>
+    <string name="confirm_empty_action">Vaciar</string>
+</resources>

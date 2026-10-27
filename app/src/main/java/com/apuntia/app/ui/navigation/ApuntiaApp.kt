@@ -32,6 +32,7 @@ import com.apuntia.app.ui.components.DockItem
 import com.apuntia.app.ui.editor.EditorScreen
 import com.apuntia.app.ui.notes.NotesScreen
 import com.apuntia.app.ui.tasks.TasksScreen
+import com.apuntia.app.ui.trash.TrashScreen
 
 private val mainRoutes = listOf(Routes.NOTES, Routes.TASKS, Routes.ALARMS, Routes.SETTINGS)
 
@@ -89,8 +90,10 @@ private fun ApuntiaNavHost(navController: NavHostController) {
             NotesScreen(
                 onOpenEntry = { navController.navigate(Routes.editor(it)) { launchSingleTop = true } },
                 onCreate = { navController.navigate(Routes.editor()) { launchSingleTop = true } },
+                onOpenTrash = { navController.navigate(Routes.TRASH) { launchSingleTop = true } },
             )
         }
+        composable(Routes.TRASH) { TrashScreen(onBack = { navController.popBackStack() }) }
         composable(Routes.TASKS) {
             TasksScreen(onOpenEntry = { navController.navigate(Routes.editor(it)) { launchSingleTop = true } })
         }

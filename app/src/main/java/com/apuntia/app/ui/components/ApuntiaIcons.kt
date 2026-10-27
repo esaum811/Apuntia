@@ -66,6 +66,11 @@ object ApuntiaIcons {
         )
     }
 
+    /** Papelera. */
+    val trash: ImageVector by lazy {
+        strokeIcon("trash", "M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6", STROKE_BOLD)
+    }
+
     /** Más (botón de nueva nota). */
     val plus: ImageVector by lazy { strokeIcon("plus", "M12 5v14 M5 12h14", STROKE_EXTRA) }
 

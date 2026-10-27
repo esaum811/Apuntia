@@ -3,6 +3,8 @@ package com.apuntia.app.ui.notes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
@@ -16,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -28,8 +31,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apuntia.app.R
 import com.apuntia.app.ui.AppViewModelProvider
 import com.apuntia.app.ui.common.entryDateLabel
+import com.apuntia.app.ui.components.ApuntiaIcons
 import com.apuntia.app.ui.components.CategoryCard
 import com.apuntia.app.ui.components.CategoryChip
+import com.apuntia.app.ui.components.IconSquareButton
 import com.apuntia.app.ui.components.PrimaryButton
 import com.apuntia.app.ui.theme.cardInk
 import com.apuntia.app.ui.theme.cardInkSoft
@@ -42,11 +47,13 @@ private val DockClearance = 130.dp
  *
  * @param onOpenEntry se llama con el id de la nota tocada.
  * @param onCreate se llama al pedir una nota nueva desde la pantalla vacía.
+ * @param onOpenTrash se llama al tocar el botón de la papelera.
  */
 @Composable
 fun NotesScreen(
     onOpenEntry: (String) -> Unit,
     onCreate: () -> Unit,
+    onOpenTrash: () -> Unit,
     viewModel: NotesViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -56,14 +63,7 @@ fun NotesScreen(
         contentPadding = PaddingValues(top = 8.dp, bottom = DockClearance + navigationBarHeight),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item(key = "title") {
-            Text(
-                stringResource(R.string.notes_title),
-                modifier = Modifier.padding(horizontal = 20.dp).semantics { heading() },
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
+        item(key = "title") { NotesHeader(onOpenTrash) }
         item(key = "filters") { CategoryFilters(state, viewModel::selectCategory) }
         if (!state.isLoading && state.notes.isEmpty()) {
             item(key = "empty") { EmptyNotes(onCreate) }
@@ -133,5 +133,22 @@ private fun EmptyNotes(onCreate: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         PrimaryButton(stringResource(R.string.empty_notes_action), onCreate, Modifier.padding(top = 8.dp))
+    }
+}
+
+@Composable
+private fun NotesHeader(onOpenTrash: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Text(
+            stringResource(R.string.notes_title),
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.displayLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        IconSquareButton(ApuntiaIcons.trash, stringResource(R.string.notes_open_trash), onOpenTrash)
     }
 }

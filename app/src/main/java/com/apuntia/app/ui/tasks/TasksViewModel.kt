@@ -1,6 +1,5 @@
 package com.apuntia.app.ui.tasks
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apuntia.app.domain.model.Category
@@ -9,16 +8,14 @@ import com.apuntia.app.domain.model.TaskSectionType
 import com.apuntia.app.domain.repository.CategoryRepository
 import com.apuntia.app.domain.repository.EntryRepository
 import com.apuntia.app.domain.usecase.GroupTasksByDueDate
+import com.apuntia.app.ui.common.launchSafely
 import java.time.ZoneId
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
-private const val TAG = "Apuntia"
 private const val STOP_TIMEOUT_MS = 5_000L
 
 /**
@@ -95,16 +92,11 @@ class TasksViewModel(
 
     /** Marca la tarea [id] como terminada o pendiente. */
     fun setDone(id: String, isDone: Boolean) {
-        viewModelScope.launch {
-            // Un fallo de la base de datos no debe cerrar la app; la lista sigue como estaba.
-            @Suppress("TooGenericExceptionCaught")
-            try {
-                entries.setDone(id, isDone)
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                Log.e(TAG, "No se pudo cambiar el estado de la tarea", error)
-            }
-        }
+        viewModelScope.launchSafely { entries.setDone(id, isDone) }
+    }
+
+    /** Envía a la papelera todas las tareas hechas; se pueden recuperar desde ahí. */
+    fun moveDoneToTrash() {
+        viewModelScope.launchSafely { entries.moveDoneTasksToTrash() }
     }
 }

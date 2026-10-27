@@ -16,6 +16,9 @@ object Routes {
     /** Ajustes. */
     const val SETTINGS = "settings"
 
+    /** Papelera. */
+    const val TRASH = "trash"
+
     /** Nombre del dato que lleva el id de la entrada a editar. */
     const val ENTRY_ID_ARG = "entryId"
 

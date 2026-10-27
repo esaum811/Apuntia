@@ -28,6 +28,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,6 +49,7 @@ import com.apuntia.app.ui.AppViewModelProvider
 import com.apuntia.app.ui.common.dueDateLabel
 import com.apuntia.app.ui.components.ApuntiaIcons
 import com.apuntia.app.ui.components.CategoryShapeIcon
+import com.apuntia.app.ui.components.ConfirmDialog
 import com.apuntia.app.ui.theme.ApuntiaTheme
 import com.apuntia.app.ui.theme.cardInk
 
@@ -63,6 +67,7 @@ fun TasksScreen(
     viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var confirmClear by rememberSaveable { mutableStateOf(false) }
     val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LazyColumn(
         modifier = Modifier.fillMaxSize().statusBarsPadding(),
@@ -84,10 +89,22 @@ fun TasksScreen(
         }
         item(key = "tabs") { TaskTabs(state, viewModel::selectTab) }
         if (state.showDone) {
-            doneContent(state, onOpenEntry, viewModel::setDone)
+            doneContent(state, onOpenEntry, viewModel::setDone) { confirmClear = true }
         } else {
             pendingContent(state, onOpenEntry, viewModel::setDone)
         }
+    }
+    if (confirmClear) {
+        ConfirmDialog(
+            title = stringResource(R.string.confirm_clear_done_title),
+            message = stringResource(R.string.confirm_clear_done_message),
+            confirmLabel = stringResource(R.string.confirm_clear_done_action),
+            onConfirm = {
+                viewModel.moveDoneToTrash()
+                confirmClear = false
+            },
+            onDismiss = { confirmClear = false },
+        )
     }
 }
 
@@ -114,6 +131,7 @@ private fun LazyListScope.doneContent(
     state: TasksUiState,
     onOpen: (String) -> Unit,
     onToggle: (String, Boolean) -> Unit,
+    onClear: () -> Unit,
 ) {
     if (!state.isLoading && state.done.isEmpty()) {
         item(key = "empty-done") {
@@ -123,7 +141,22 @@ private fun LazyListScope.doneContent(
             )
         }
     }
+    if (state.done.isNotEmpty()) {
+        item(key = "clear-done") { ClearDoneButton(onClear) }
+    }
     items(state.done, key = { it.entry.id }, contentType = { "task" }) { TaskRow(it, onOpen, onToggle) }
+}
+
+@Composable
+private fun ClearDoneButton(onClick: () -> Unit) {
+    Box(Modifier.defaultMinSize(minHeight = 48.dp).clickable(role = Role.Button, onClick = onClick)) {
+        Text(
+            stringResource(R.string.tasks_clear_done),
+            modifier = Modifier.align(Alignment.CenterStart),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
 }
 
 private fun TaskSectionType.titleRes(): Int = when (this) {

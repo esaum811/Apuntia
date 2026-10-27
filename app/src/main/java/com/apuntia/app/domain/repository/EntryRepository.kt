@@ -29,6 +29,12 @@ interface EntryRepository {
     /** Envía una entrada a la papelera. */
     suspend fun moveToTrash(id: String)
 
+    /** Envía a la papelera todas las tareas terminadas. */
+    suspend fun moveDoneTasksToTrash()
+
+    /** Borra para siempre todo lo que está en la papelera. */
+    suspend fun emptyTrash()
+
     /** Saca una entrada de la papelera. */
     suspend fun restore(id: String)
 

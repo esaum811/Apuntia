@@ -14,6 +14,12 @@ complexity:
     active: true
     allowedLines: 40
     ignoreAnnotated: [ 'Composable' ]
+  TooManyFunctions:
+    allowedFunctionsPerFile: 20
+    allowedFunctionsPerClass: 20
+    allowedFunctionsPerInterface: 20
+    allowedFunctionsPerObject: 20
+    ignoreOverridden: true
 
 naming:
   FunctionNaming:

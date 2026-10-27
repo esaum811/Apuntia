@@ -51,6 +51,7 @@ import com.apuntia.app.ui.AppViewModelProvider
 import com.apuntia.app.ui.components.ApuntiaIcons
 import com.apuntia.app.ui.components.CategoryChip
 import com.apuntia.app.ui.components.CategoryShapeIcon
+import com.apuntia.app.ui.components.IconSquareButton
 import com.apuntia.app.ui.common.dueDateLabel
 import com.apuntia.app.ui.components.SegmentedControl
 import com.apuntia.app.ui.theme.ApuntiaTheme
@@ -120,20 +121,7 @@ fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(fac
 private fun EditorTopBar(isEditing: Boolean, canSave: Boolean, onBack: () -> Unit, onSave: () -> Unit) {
     val colors = ApuntiaTheme.colors
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier
-                .size(48.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
-                .clickable(role = Role.Button, onClick = onBack),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                ApuntiaIcons.back,
-                contentDescription = stringResource(R.string.editor_back),
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(26.dp),
-            )
-        }
+        IconSquareButton(ApuntiaIcons.back, stringResource(R.string.editor_back), onBack)
         Text(
             stringResource(if (isEditing) R.string.editor_edit_title else R.string.editor_new_title),
             modifier = Modifier.weight(1f).padding(horizontal = 12.dp).semantics { heading() },

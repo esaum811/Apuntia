@@ -12,6 +12,7 @@ import com.apuntia.app.ui.editor.EditorViewModel
 import com.apuntia.app.ui.navigation.Routes
 import com.apuntia.app.ui.notes.NotesViewModel
 import com.apuntia.app.ui.tasks.TasksViewModel
+import com.apuntia.app.ui.trash.TrashViewModel
 
 private fun CreationExtras.container(): AppContainer = (this[APPLICATION_KEY] as ApuntiaApplication).container
 
@@ -21,6 +22,7 @@ object AppViewModelProvider {
     val Factory = viewModelFactory {
         initializer { NotesViewModel(container().entries, container().categories) }
         initializer { TasksViewModel(container().entries, container().categories) }
+        initializer { TrashViewModel(container().entries, container().categories) }
         initializer {
             EditorViewModel(
                 entryId = createSavedStateHandle()[Routes.ENTRY_ID_ARG],
