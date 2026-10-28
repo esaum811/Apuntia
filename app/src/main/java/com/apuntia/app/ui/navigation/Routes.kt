@@ -19,6 +19,15 @@ object Routes {
     /** Papelera. */
     const val TRASH = "trash"
 
+    /** Nombre del dato que lleva el id de la alarma a editar. */
+    const val ALARM_ID_ARG = "alarmId"
+
+    /** Patrón de la pantalla del editor de alarmas; el id es opcional. */
+    const val ALARM_EDITOR = "alarm?$ALARM_ID_ARG={$ALARM_ID_ARG}"
+
+    /** Ruta para abrir el editor de alarmas; [alarmId] nulo crea una alarma nueva. */
+    fun alarmEditor(alarmId: String? = null): String = if (alarmId == null) "alarm" else "alarm?$ALARM_ID_ARG=$alarmId"
+
     /** Nombre del dato que lleva el id de la entrada a editar. */
     const val ENTRY_ID_ARG = "entryId"
 

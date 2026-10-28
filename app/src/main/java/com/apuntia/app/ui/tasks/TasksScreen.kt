@@ -50,6 +50,7 @@ import com.apuntia.app.ui.common.dueDateLabel
 import com.apuntia.app.ui.components.ApuntiaIcons
 import com.apuntia.app.ui.components.CategoryShapeIcon
 import com.apuntia.app.ui.components.ConfirmDialog
+import com.apuntia.app.ui.components.IconSquareButton
 import com.apuntia.app.ui.theme.ApuntiaTheme
 import com.apuntia.app.ui.theme.cardInk
 
@@ -60,10 +61,12 @@ private val DockClearance = 130.dp
  * Pantalla de tareas: pendientes agrupadas por fecha límite y hechas.
  *
  * @param onOpenEntry se llama con el id de la tarea tocada.
+ * @param onOpenTrash se llama al tocar el botón de la papelera.
  */
 @Composable
 fun TasksScreen(
     onOpenEntry: (String) -> Unit,
+    onOpenTrash: () -> Unit,
     viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,14 +82,7 @@ fun TasksScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item(key = "title") {
-            Text(
-                stringResource(R.string.tasks_title),
-                modifier = Modifier.semantics { heading() },
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
+        item(key = "title") { TasksHeader(onOpenTrash) }
         item(key = "tabs") { TaskTabs(state, viewModel::selectTab) }
         if (state.showDone) {
             doneContent(state, onOpenEntry, viewModel::setDone) { confirmClear = true }
@@ -105,6 +101,23 @@ fun TasksScreen(
             },
             onDismiss = { confirmClear = false },
         )
+    }
+}
+
+@Composable
+private fun TasksHeader(onOpenTrash: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Text(
+            stringResource(R.string.tasks_title),
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.displayLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        IconSquareButton(ApuntiaIcons.trash, stringResource(R.string.notes_open_trash), onOpenTrash)
     }
 }
 

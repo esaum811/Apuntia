@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.apuntia.app.ApuntiaApplication
 import com.apuntia.app.di.AppContainer
 import com.apuntia.app.domain.model.EntryType
+import com.apuntia.app.ui.alarms.AlarmEditorViewModel
+import com.apuntia.app.ui.alarms.AlarmsViewModel
 import com.apuntia.app.ui.editor.EditorViewModel
 import com.apuntia.app.ui.navigation.Routes
 import com.apuntia.app.ui.notes.NotesViewModel
@@ -23,6 +25,15 @@ object AppViewModelProvider {
         initializer { NotesViewModel(container().entries, container().categories) }
         initializer { TasksViewModel(container().entries, container().categories) }
         initializer { TrashViewModel(container().entries, container().categories) }
+        initializer { AlarmsViewModel(container().reminders, container().categories, container().alarmScheduler) }
+        initializer {
+            AlarmEditorViewModel(
+                alarmId = createSavedStateHandle()[Routes.ALARM_ID_ARG],
+                reminders = container().reminders,
+                categories = container().categories,
+                scheduler = container().alarmScheduler,
+            )
+        }
         initializer {
             EditorViewModel(
                 entryId = createSavedStateHandle()[Routes.ENTRY_ID_ARG],

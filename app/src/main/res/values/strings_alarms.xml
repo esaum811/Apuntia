@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_new_alarm">Nueva alarma</string>
+
+    <string name="alarms_title">Mis alarmas</string>
+    <string name="alarms_empty_title">Aún no hay alarmas</string>
+    <string name="alarms_empty_hint">Toca el botón + para crear la primera.</string>
+    <string name="alarms_permission_message">Para que las alarmas suenen con la app cerrada, permite «Alarmas y recordatorios».</string>
+    <string name="alarms_permission_action">Permitir</string>
+
+    <string name="alarm_today">Hoy</string>
+    <string name="alarm_tomorrow">Mañana</string>
+    <string name="alarm_every_weekday">Cada %1$s</string>
+    <string name="alarm_disabled_suffix">, desactivada</string>
+    <string name="alarm_switch_description">Alarma de las %1$s</string>
+
+    <string name="alarm_new_title">Nueva alarma</string>
+    <string name="alarm_edit_title">Editar alarma</string>
+    <string name="alarm_time_label">Hora</string>
+    <string name="alarm_label_label">Etiqueta (opcional)</string>
+    <string name="alarm_repeat_label">Repetir</string>
+    <string name="alarm_repeat_none">Una vez</string>
+    <string name="alarm_repeat_daily">Todos los días</string>
+    <string name="alarm_repeat_weekdays">Lunes a viernes</string>
+    <string name="alarm_repeat_weekly">Cada semana</string>
+    <string name="alarm_delete">Eliminar alarma</string>
+
+    <string name="alarm_channel_name">Alarmas</string>
+    <string name="alarm_default_label">Alarma</string>
+    <string name="alarm_ringing">Suena ahora</string>
+    <string name="alarm_ringing_now">Suena ahora</string>
+    <string name="alarm_dismiss">Terminar</string>
+    <string name="alarm_snooze_short">Posponer</string>
+    <string name="alarm_snooze_long">Posponer 10 min</string>
+</resources>

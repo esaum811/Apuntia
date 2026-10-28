@@ -2,6 +2,8 @@ package com.apuntia.app.di
 
 import android.content.Context
 import android.util.Log
+import com.apuntia.app.alarm.AlarmScheduler
+import com.apuntia.app.alarm.AndroidAlarmScheduler
 import com.apuntia.app.data.local.database.ApuntiaDatabase
 import com.apuntia.app.data.local.database.ApuntiaDatabaseFactory
 import com.apuntia.app.data.repository.RoomCategoryRepository
@@ -35,6 +37,9 @@ class AppContainer(context: Context) {
     private val database: ApuntiaDatabase by lazy {
         ApuntiaDatabaseFactory.create(appContext, DatabaseKeyProvider(appContext).getOrCreatePassphrase())
     }
+
+    /** Programa y cancela las alarmas en el sistema. */
+    val alarmScheduler: AlarmScheduler by lazy { AndroidAlarmScheduler(appContext) }
 
     /** Categorías. */
     val categories: CategoryRepository by lazy { RoomCategoryRepository(database.categoryDao()) }

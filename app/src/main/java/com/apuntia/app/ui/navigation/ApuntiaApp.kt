@@ -29,6 +29,8 @@ import com.apuntia.app.ui.common.StartupErrorScreen
 import com.apuntia.app.ui.components.ApuntiaDock
 import com.apuntia.app.ui.components.ApuntiaIcons
 import com.apuntia.app.ui.components.DockItem
+import com.apuntia.app.ui.alarms.AlarmEditorScreen
+import com.apuntia.app.ui.alarms.AlarmsScreen
 import com.apuntia.app.ui.editor.EditorScreen
 import com.apuntia.app.ui.notes.NotesScreen
 import com.apuntia.app.ui.tasks.TasksScreen
@@ -63,11 +65,19 @@ private fun ApuntiaMainContent() {
                 selectedIndex = selectedIndex,
                 onSelect = { navController.navigateToMain(mainRoutes[it]) },
                 onAdd = {
-                    val type = if (route == Routes.TASKS) EntryType.TASK else null
-                    navController.navigate(Routes.editor(type = type)) { launchSingleTop = true }
+                    val target = when (route) {
+                        Routes.ALARMS -> Routes.alarmEditor()
+                        Routes.TASKS -> Routes.editor(type = EntryType.TASK)
+                        else -> Routes.editor()
+                    }
+                    navController.navigate(target) { launchSingleTop = true }
                 },
                 addDescription = stringResource(
-                    if (route == Routes.TASKS) R.string.nav_new_task else R.string.nav_new_entry,
+                    when (route) {
+                        Routes.ALARMS -> R.string.nav_new_alarm
+                        Routes.TASKS -> R.string.nav_new_task
+                        else -> R.string.nav_new_entry
+                    },
                 ),
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding(),
             )
@@ -95,9 +105,24 @@ private fun ApuntiaNavHost(navController: NavHostController) {
         }
         composable(Routes.TRASH) { TrashScreen(onBack = { navController.popBackStack() }) }
         composable(Routes.TASKS) {
-            TasksScreen(onOpenEntry = { navController.navigate(Routes.editor(it)) { launchSingleTop = true } })
+            TasksScreen(
+                onOpenEntry = { navController.navigate(Routes.editor(it)) { launchSingleTop = true } },
+                onOpenTrash = { navController.navigate(Routes.TRASH) { launchSingleTop = true } },
+            )
         }
-        composable(Routes.ALARMS) { ComingSoonScreen(stringResource(R.string.nav_alarms)) }
+        composable(Routes.ALARMS) {
+            AlarmsScreen(onOpenAlarm = { navController.navigate(Routes.alarmEditor(it)) { launchSingleTop = true } })
+        }
+        composable(
+            Routes.ALARM_EDITOR,
+            arguments = listOf(
+                navArgument(Routes.ALARM_ID_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
+        ) { AlarmEditorScreen(onClose = { navController.popBackStack() }) }
         composable(Routes.SETTINGS) { ComingSoonScreen(stringResource(R.string.nav_settings)) }
         composable(
             Routes.EDITOR,

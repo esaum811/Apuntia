@@ -13,6 +13,7 @@ import com.apuntia.app.domain.model.RepeatRule
  *
  * @property id identificador único (UUID).
  * @property entryId entrada relacionada, o nulo si es una alarma suelta.
+ * @property categoryId categoría de la alarma; da el color con el que se muestra.
  * @property label texto que se muestra al sonar la alarma.
  * @property triggerAt próxima fecha y hora en que debe sonar (milisegundos UTC).
  * @property repeatRule cada cuánto se repite.
@@ -29,12 +30,19 @@ import com.apuntia.app.domain.model.RepeatRule
             childColumns = ["entryId"],
             onDelete = ForeignKey.CASCADE,
         ),
+        ForeignKey(
+            entity = CategoryEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["categoryId"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
     ],
-    indices = [Index("entryId"), Index("isEnabled")],
+    indices = [Index("entryId"), Index("categoryId"), Index("isEnabled")],
 )
 data class ReminderEntity(
     @PrimaryKey val id: String,
     val entryId: String?,
+    val categoryId: String,
     val label: String,
     val triggerAt: Long,
     val repeatRule: RepeatRule,

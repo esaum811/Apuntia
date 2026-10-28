@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "8a23acf9a41c33ff96ba372829131088",
+    "identityHash": "47f3b4d383e659336c92aba96fac9e1a",
     "entities": [
       {
         "tableName": "categories",
@@ -183,7 +183,7 @@
       },
       {
         "tableName": "reminders",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `entryId` TEXT, `label` TEXT NOT NULL, `triggerAt` INTEGER NOT NULL, `repeatRule` TEXT NOT NULL, `ringtoneUri` TEXT, `isEnabled` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`entryId`) REFERENCES `entries`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `entryId` TEXT, `categoryId` TEXT NOT NULL, `label` TEXT NOT NULL, `triggerAt` INTEGER NOT NULL, `repeatRule` TEXT NOT NULL, `ringtoneUri` TEXT, `isEnabled` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`entryId`) REFERENCES `entries`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
         "fields": [
           {
             "fieldPath": "id",
@@ -195,6 +195,12 @@
             "fieldPath": "entryId",
             "columnName": "entryId",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoryId",
+            "affinity": "TEXT",
+            "notNull": true
           },
           {
             "fieldPath": "label",
@@ -249,6 +255,15 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_reminders_entryId` ON `${TABLE_NAME}` (`entryId`)"
           },
           {
+            "name": "index_reminders_categoryId",
+            "unique": false,
+            "columnNames": [
+              "categoryId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_reminders_categoryId` ON `${TABLE_NAME}` (`categoryId`)"
+          },
+          {
             "name": "index_reminders_isEnabled",
             "unique": false,
             "columnNames": [
@@ -269,13 +284,24 @@
             "referencedColumns": [
               "id"
             ]
+          },
+          {
+            "table": "categories",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "categoryId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
           }
         ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8a23acf9a41c33ff96ba372829131088')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '47f3b4d383e659336c92aba96fac9e1a')"
     ]
   }
 }
