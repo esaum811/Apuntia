@@ -21,8 +21,8 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.getSystemService
 import com.apuntia.app.ApuntiaApplication
 import com.apuntia.app.R
-import com.apuntia.app.domain.model.Reminder
 import com.apuntia.app.domain.model.RepeatRule
+import com.apuntia.app.domain.model.Reminder
 import com.apuntia.app.domain.usecase.NextAlarmTime
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
@@ -38,12 +38,12 @@ private const val CHANNEL_ID = "apuntia_alarms"
 private const val NOTIFICATION_ID = 1001
 private const val SNOOZE_MINUTES = 10L
 private const val MILLIS_PER_MINUTE = 60_000L
-private const val MAX_RING_MINUTES = 2L
+private const val MAX_RING_MINUTES = 10L
 private val VIBRATION_PATTERN = longArrayOf(0, 600, 600)
 
 /**
  * Hace sonar la alarma: reproduce el sonido en bucle, vibra y muestra una notificación que abre
- * la pantalla de alarma. Se detiene al terminar, al posponer o a los 2 minutos.
+ * la pantalla de alarma. Se detiene al terminar, al posponer o a los 10 minutos.
  */
 class AlarmService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -64,6 +64,8 @@ class AlarmService : Service() {
     }
 
     private fun startRinging(id: String, isSnooze: Boolean) {
+        // Primero se marca que suena: la pantalla de alarma se cierra sola si ve que no hay ninguna sonando.
+        AlarmState.setRinging(true)
         // Android exige mostrar la notificación enseguida; el texto real llega cuando se lee la alarma.
         ServiceCompat.startForeground(
             this,
@@ -71,6 +73,7 @@ class AlarmService : Service() {
             buildNotification(id, getString(R.string.alarm_default_label)),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
         )
+        showAlarmScreen(id)
         scope.launch {
             @Suppress("TooGenericExceptionCaught")
             val reminder = try {
@@ -93,7 +96,15 @@ class AlarmService : Service() {
         }
     }
 
-    // Deja la programación lista para la próxima vez: se repite o se desactiva. Una posposición no la toca.
+    // Abre la pantalla de alarma encima de lo que haya. Con el teléfono bloqueado lo hace la notificación
+    // de pantalla completa; con otra app abierta, el permiso "Mostrar sobre otras apps".
+    private fun showAlarmScreen(id: String) {
+        val screen = Intent(this, AlarmActivity::class.java)
+            .putExtra(AlarmIntents.EXTRA_REMINDER_ID, id)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(screen)
+    }
+
     // Deja la programación lista para la próxima vez: se repite o se desactiva. Una posposición no la toca.
     private suspend fun loadAndAdvance(id: String, isSnooze: Boolean): Reminder? {
         val container = (applicationContext as ApuntiaApplication).container
@@ -146,6 +157,7 @@ class AlarmService : Service() {
     }
 
     private fun stopRinging() {
+        AlarmState.setRinging(false)
         timeout?.cancel()
         player?.run {
             runCatching { stop() }
@@ -158,6 +170,7 @@ class AlarmService : Service() {
     }
 
     override fun onDestroy() {
+        AlarmState.setRinging(false)
         scope.cancel()
         player?.release()
         player = null

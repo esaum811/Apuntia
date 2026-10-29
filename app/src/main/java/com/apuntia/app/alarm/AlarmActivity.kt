@@ -6,6 +6,8 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.addCallback
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import com.apuntia.app.ApuntiaApplication
@@ -29,8 +31,12 @@ class AlarmActivity : ComponentActivity() {
             finish()
             return
         }
+        // La pantalla solo se cierra con Terminar o Posponer; el botón Atrás no hace nada.
+        onBackPressedDispatcher.addCallback(this) {}
         val container = (applicationContext as ApuntiaApplication).container
         setContent {
+            // Si la alarma termina por otro camino (botón de la notificación o tiempo agotado), se cierra sola.
+            LaunchedEffect(Unit) { AlarmState.isRinging.collect { ringing -> if (!ringing) finish() } }
             ApuntiaTheme {
                 val data by produceState<Pair<Reminder, Category?>?>(null, id) {
                     val reminder = container.reminders.get(id)
