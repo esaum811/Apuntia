@@ -28,6 +28,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,6 +45,9 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apuntia.app.R
+import com.apuntia.app.alarm.ScreenPermission
+import com.apuntia.app.alarm.missingScreenPermission
+import com.apuntia.app.alarm.screenPermissionSettings
 import com.apuntia.app.ui.AppViewModelProvider
 import com.apuntia.app.ui.common.displayTime
 import com.apuntia.app.ui.components.ApuntiaSwitch
@@ -65,7 +71,11 @@ fun AlarmsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     // Al volver de los ajustes del sistema, el permiso pudo haber cambiado.
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshPermission() }
+    var screenPermission by remember { mutableStateOf(missingScreenPermission(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshPermission()
+        screenPermission = missingScreenPermission(context)
+    }
     val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LazyColumn(
         modifier = Modifier.fillMaxSize().statusBarsPadding(),
@@ -86,7 +96,16 @@ fun AlarmsScreen(
             )
         }
         if (!state.canScheduleExact) {
-            item(key = "permission") { PermissionBanner { openExactAlarmSettings(context) } }
+            item(key = "permission") {
+                PermissionBanner(stringResource(R.string.alarms_permission_message)) { openExactAlarmSettings(context) }
+            }
+        }
+        screenPermission?.let { missing ->
+            item(key = "screen-permission") {
+                PermissionBanner(stringResource(missing.messageRes())) {
+                    runCatching { context.startActivity(screenPermissionSettings(context, missing)) }
+                }
+            }
         }
         if (!state.isLoading && state.items.isEmpty()) {
             item(key = "empty") { EmptyAlarms() }
@@ -107,8 +126,13 @@ private fun openExactAlarmSettings(context: Context) {
     }
 }
 
+private fun ScreenPermission.messageRes(): Int = when (this) {
+    ScreenPermission.OVERLAY -> R.string.alarms_overlay_message
+    ScreenPermission.FULL_SCREEN -> R.string.alarms_full_screen_message
+}
+
 @Composable
-private fun PermissionBanner(onAllow: () -> Unit) {
+private fun PermissionBanner(message: String, onAllow: () -> Unit) {
     val colors = ApuntiaTheme.colors
     Row(
         Modifier.fillMaxWidth().background(colors.dock, RoundedCornerShape(22.dp)).padding(16.dp),
@@ -116,7 +140,7 @@ private fun PermissionBanner(onAllow: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            stringResource(R.string.alarms_permission_message),
+            message,
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium,
             color = colors.dockMuted,

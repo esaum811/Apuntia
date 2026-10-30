@@ -6,6 +6,8 @@
     <string name="alarms_empty_title">Aún no hay alarmas</string>
     <string name="alarms_empty_hint">Toca el botón + para crear la primera.</string>
     <string name="alarms_permission_message">Para que las alarmas suenen con la app cerrada, permite «Alarmas y recordatorios».</string>
+    <string name="alarms_overlay_message">Para que la alarma aparezca sobre cualquier app, permite «Mostrar sobre otras apps».</string>
+    <string name="alarms_full_screen_message">Para que la alarma aparezca con el teléfono bloqueado, permite «Notificaciones en pantalla completa».</string>
     <string name="alarms_permission_action">Permitir</string>
 
     <string name="alarm_today">Hoy</string>
