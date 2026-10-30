@@ -46,6 +46,9 @@ interface EntryRepository {
     /** Borra una entrada para siempre. */
     suspend fun deleteForever(id: String)
 
+    /** Borra para siempre todas las entradas confidenciales, también las de la papelera. Es irreversible. */
+    suspend fun deleteConfidential()
+
     /** Borra para siempre lo que lleva más de 30 días en la papelera. */
     suspend fun purgeOldTrash()
 }

@@ -46,7 +46,9 @@ class AppContainer(context: Context) {
     }
 
     /** Bóveda de las notas confidenciales (PIN y cifrado). */
-    val vault: Vault by lazy { PinVault(SharedPrefsVaultStorage(appContext), KeystoreKeyWrapper()) }
+    val vault: Vault by lazy {
+        PinVault(SharedPrefsVaultStorage(appContext), KeystoreKeyWrapper(), onWipe = { entries.deleteConfidential() })
+    }
 
     /** Cierra la bóveda cuando la app pasa un rato en segundo plano. */
     val vaultAutoLock: VaultAutoLock by lazy {

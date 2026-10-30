@@ -19,8 +19,8 @@ private const val KEY_BYTES = 32
 private const val SALT_BYTES = 16
 private const val PBKDF2_ITERATIONS = 210_000
 private const val ATTEMPTS_BEFORE_LOCKOUT = 5
-private const val LOCKOUT_BASE_MS = 30_000L
-private const val LOCKOUT_MAX_MS = 30 * 60_000L
+private const val LOCKOUT_MS = 2 * 60_000L
+private const val MAX_FAILURES = 8
 private const val BITS_PER_BYTE = 8
 
 /**
@@ -28,18 +28,21 @@ private const val BITS_PER_BYTE = 8
  *
  * Una llave aleatoria cifra las notas. Esa llave se guarda cifrada dos veces: con una llave sacada
  * del PIN (PBKDF2) y con una llave del Android Keystore. Para abrirla hacen falta el PIN y este teléfono.
- * Tras 5 intentos fallidos hay que esperar, y la espera crece con cada nueva tanda de fallos.
+ * Tras 5 intentos fallidos hay que esperar 2 minutos; después quedan 3 intentos más y, si todos
+ * fallan, se borran para siempre las notas confidenciales y se quita el PIN.
  *
  * @param storage dónde se guardan los datos protegidos.
  * @param wrapper llave del teléfono que envuelve la llave de la bóveda.
  * @param clock hora actual en milisegundos; se cambia en las pruebas.
  * @param iterations vueltas de PBKDF2; las pruebas usan menos para ir rápido.
+ * @param onWipe borra las notas confidenciales de la base de datos cuando se agotan los intentos.
  */
 class PinVault(
     private val storage: VaultStorage,
     private val wrapper: KeyWrapper,
     private val clock: () -> Long = System::currentTimeMillis,
     private val iterations: Int = PBKDF2_ITERATIONS,
+    private val onWipe: suspend () -> Unit = {},
 ) : Vault {
     private val random = SecureRandom()
 
@@ -96,23 +99,36 @@ class PinVault(
         return UnlockResult.Success
     }
 
-    private fun registerFailure(): UnlockResult {
+    private suspend fun registerFailure(): UnlockResult {
         val failed = readLong(KEY_FAILED).toInt() + 1
-        val round = failed / ATTEMPTS_BEFORE_LOCKOUT
-        val lockedOut = failed % ATTEMPTS_BEFORE_LOCKOUT == 0
-        val wait = if (lockedOut) lockoutMillis(round) else 0L
-        storage.write(mapOf(KEY_FAILED to failed.toString(), KEY_LOCKED_UNTIL to (clock() + wait).toString()))
+        if (failed >= MAX_FAILURES) {
+            wipe()
+            return UnlockResult.Wiped
+        }
+        val lockedOut = failed == ATTEMPTS_BEFORE_LOCKOUT
+        val lockedUntil = if (lockedOut) clock() + LOCKOUT_MS else 0L
+        storage.write(mapOf(KEY_FAILED to failed.toString(), KEY_LOCKED_UNTIL to lockedUntil.toString()))
         return if (lockedOut) {
-            UnlockResult.LockedOut(wait)
+            UnlockResult.LockedOut(LOCKOUT_MS)
         } else {
-            UnlockResult.WrongPin(ATTEMPTS_BEFORE_LOCKOUT - failed % ATTEMPTS_BEFORE_LOCKOUT)
+            val afterLockout = failed > ATTEMPTS_BEFORE_LOCKOUT
+            val left = if (afterLockout) MAX_FAILURES - failed else ATTEMPTS_BEFORE_LOCKOUT - failed
+            UnlockResult.WrongPin(left, willWipe = afterLockout)
         }
     }
 
-    // 30 s, 1 min, 2 min, 4 min… hasta 30 min.
-    private fun lockoutMillis(round: Int): Long {
-        val factor = 1L shl (round - 1).coerceIn(0, MAX_DOUBLINGS)
-        return (LOCKOUT_BASE_MS * factor).coerceAtMost(LOCKOUT_MAX_MS)
+    // Primero se borran las notas; solo si eso salió bien se quita el PIN. Así, si algo falla,
+    // el siguiente intento fallido vuelve a intentar el borrado.
+    private suspend fun wipe() {
+        onWipe()
+        check(storage.clear()) { "No se pudo quitar el PIN" }
+        key = null
+        mutableState.value = VaultState.NO_PIN
+    }
+
+    override fun finalAttemptsLeft(): Int? {
+        val failed = readLong(KEY_FAILED).toInt()
+        return if (failed >= ATTEMPTS_BEFORE_LOCKOUT) MAX_FAILURES - failed else null
     }
 
     override fun lock() {
@@ -136,9 +152,4 @@ class PinVault(
     private fun encode(bytes: ByteArray): String = Base64.getEncoder().encodeToString(bytes)
 
     private fun decode(text: String): ByteArray = Base64.getDecoder().decode(text)
-
-    private companion object {
-        /** Tope de duplicaciones de la espera (2^6 × 30 s ya supera el máximo de 30 min). */
-        const val MAX_DOUBLINGS = 6
-    }
 }

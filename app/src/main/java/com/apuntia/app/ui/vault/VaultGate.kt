@@ -100,6 +100,7 @@ fun VaultGate(onCancel: () -> Unit, viewModel: VaultViewModel = viewModel(factor
             color = MaterialTheme.colorScheme.onBackground,
         )
         if (creating) WarningCard()
+        state.finalAttemptsLeft?.let { WipeWarning(it) }
         PinField(stringResource(R.string.vault_pin_label), viewModel.pinState, autoFocus = true)
         if (creating) PinField(stringResource(R.string.vault_confirm_label), viewModel.confirmState)
         Message(state.message, waitSeconds)
@@ -128,6 +129,19 @@ private fun WarningCard() {
             color = colors.dockMuted,
         )
     }
+}
+
+@Composable
+private fun WipeWarning(attemptsLeft: Int) {
+    Text(
+        stringResource(R.string.vault_wipe_warning, attemptsLeft),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.error, RoundedCornerShape(22.dp))
+            .padding(16.dp),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onError,
+    )
 }
 
 @Composable
@@ -171,7 +185,10 @@ private fun messageText(message: VaultMessage): String = when (message) {
     VaultMessage.InvalidPin ->
         stringResource(R.string.vault_error_invalid, PinRules.MIN_LENGTH, PinRules.MAX_LENGTH)
     VaultMessage.PinsDontMatch -> stringResource(R.string.vault_error_mismatch)
-    is VaultMessage.WrongPin -> stringResource(R.string.vault_error_wrong, message.attemptsLeft)
+    is VaultMessage.WrongPin -> stringResource(
+        if (message.willWipe) R.string.vault_error_wrong_final else R.string.vault_error_wrong,
+        message.attemptsLeft,
+    )
     VaultMessage.Failed -> stringResource(R.string.vault_error_failed)
 }
 

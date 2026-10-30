@@ -1,8 +1,8 @@
 package com.apuntia.app.ui.editor
 
-import android.util.Log
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apuntia.app.core.IdGenerator
@@ -100,6 +100,12 @@ class EditorViewModel(
                 )
             }
         }
+    }
+
+    // Al salir del editor la bóveda se cierra: cada vez que se abre una nota confidencial se pide el PIN.
+    override fun onCleared() {
+        vault.lock()
+        super.onCleared()
     }
 
     /** Cambia entre nota y tarea. */

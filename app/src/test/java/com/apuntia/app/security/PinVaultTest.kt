@@ -13,7 +13,8 @@ class PinVaultTest {
     private val storage = FakeStorage()
     private var now = 1_000_000L
 
-    private fun newVault() = PinVault(storage, IdentityWrapper(), clock = { now }, iterations = TEST_ITERATIONS)
+    private fun newVault(onWipe: suspend () -> Unit = {}) =
+        PinVault(storage, IdentityWrapper(), clock = { now }, iterations = TEST_ITERATIONS, onWipe = onWipe)
 
     @Test
     fun startsWithoutPin() {
@@ -66,7 +67,7 @@ class PinVaultTest {
     fun wrongPinKeepsTheVaultLockedAndCountsAttempts() = runBlocking {
         val vault = newVault().also { it.createPin("1234") }
         vault.lock()
-        assertEquals(UnlockResult.WrongPin(attemptsLeft = 4), vault.unlock("0000"))
+        assertEquals(UnlockResult.WrongPin(attemptsLeft = 4, willWipe = false), vault.unlock("0000"))
         assertEquals(VaultState.LOCKED, vault.state.value)
     }
 
@@ -78,7 +79,8 @@ class PinVaultTest {
         val result = vault.unlock("0000")
         assertTrue(result is UnlockResult.LockedOut)
         assertTrue(vault.unlock("1234") is UnlockResult.LockedOut)
-        now += 31_000
+        assertEquals(120_000L, (result as UnlockResult.LockedOut).remainingMillis)
+        now += 121_000
         assertEquals(UnlockResult.Success, vault.unlock("1234"))
     }
 
@@ -91,14 +93,73 @@ class PinVaultTest {
     }
 
     @Test
-    fun secondRoundOfFailuresWaitsLonger() = runBlocking {
+    fun threeMoreFailuresAfterTheWaitWipeEverything() = runBlocking {
+        var wiped = 0
+        val vault = newVault(onWipe = { wiped++ }).also { it.createPin("1234") }
+        vault.lock()
+        repeat(5) { vault.unlock("0000") }
+        now += 121_000
+        assertEquals(UnlockResult.WrongPin(attemptsLeft = 2, willWipe = true), vault.unlock("0000"))
+        assertEquals(UnlockResult.WrongPin(attemptsLeft = 1, willWipe = true), vault.unlock("0000"))
+        assertEquals(0, wiped)
+        assertEquals(UnlockResult.Wiped, vault.unlock("0000"))
+        assertEquals(1, wiped)
+        assertEquals(VaultState.NO_PIN, vault.state.value)
+        assertEquals(VaultState.NO_PIN, newVault().state.value)
+    }
+
+    @Test
+    fun aNewPinCanBeCreatedAfterAWipe() = runBlocking {
         val vault = newVault().also { it.createPin("1234") }
         vault.lock()
         repeat(5) { vault.unlock("0000") }
-        now += 31_000
+        now += 121_000
+        repeat(3) { vault.unlock("0000") }
+        vault.createPin("5678")
+        assertEquals(VaultState.UNLOCKED, vault.state.value)
+        assertEquals(null, vault.finalAttemptsLeft())
+    }
+
+    @Test
+    fun correctPinAfterTheWaitResetsTheCounters() = runBlocking {
+        val vault = newVault().also { it.createPin("1234") }
+        vault.lock()
+        repeat(5) { vault.unlock("0000") }
+        now += 121_000
+        assertEquals(UnlockResult.Success, vault.unlock("1234"))
+        vault.lock()
+        assertEquals(UnlockResult.WrongPin(attemptsLeft = 4, willWipe = false), vault.unlock("0000"))
+        assertEquals(null, vault.finalAttemptsLeft())
+    }
+
+    @Test
+    fun finalAttemptsLeftAppearsOnlyAfterTheFifthFailure() = runBlocking {
+        val vault = newVault().also { it.createPin("1234") }
+        vault.lock()
         repeat(4) { vault.unlock("0000") }
-        val result = vault.unlock("0000") as UnlockResult.LockedOut
-        assertEquals(60_000L, result.remainingMillis)
+        assertEquals(null, vault.finalAttemptsLeft())
+        vault.unlock("0000")
+        assertEquals(3, vault.finalAttemptsLeft())
+        now += 121_000
+        vault.unlock("0000")
+        assertEquals(2, vault.finalAttemptsLeft())
+    }
+
+    @Test
+    fun ifTheWipeFailsThePinIsNotRemoved() = runBlocking {
+        val vault = newVault(onWipe = { error("falló el borrado") }).also { it.createPin("1234") }
+        vault.lock()
+        repeat(5) { vault.unlock("0000") }
+        now += 121_000
+        repeat(2) { vault.unlock("0000") }
+        try {
+            vault.unlock("0000")
+            fail("Debió lanzar la excepción del borrado")
+        } catch (_: IllegalStateException) {
+            // Esperado.
+        }
+        assertEquals(VaultState.LOCKED, vault.state.value)
+        assertEquals(UnlockResult.Success, vault.unlock("1234"))
     }
 
     @Test
@@ -136,6 +197,10 @@ private class FakeStorage : VaultStorage {
     override fun read(key: String): String? = data[key]
     override fun write(values: Map<String, String>): Boolean {
         data += values
+        return true
+    }
+    override fun clear(): Boolean {
+        data.clear()
         return true
     }
 }

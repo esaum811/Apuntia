@@ -55,5 +55,7 @@ class RoomEntryRepository(
 
     override suspend fun deleteForever(id: String) = dao.deleteForever(id)
 
+    override suspend fun deleteConfidential() = dao.deleteConfidential()
+
     override suspend fun purgeOldTrash() = dao.purgeTrashOlderThan(clock() - TRASH_DAYS * MILLIS_PER_DAY)
 }

@@ -1,5 +1,6 @@
 package com.apuntia.app.ui.editor
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -27,11 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -48,22 +49,22 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apuntia.app.R
+import com.apuntia.app.security.VaultState
+import com.apuntia.app.ui.vault.VaultGate
+import com.apuntia.app.ui.common.SecureWindow
+import com.apuntia.app.ui.components.ApuntiaSwitch
 import com.apuntia.app.domain.model.Category
 import com.apuntia.app.domain.model.EntryType
-import com.apuntia.app.security.VaultState
 import com.apuntia.app.ui.AppViewModelProvider
-import com.apuntia.app.ui.common.SecureWindow
-import com.apuntia.app.ui.common.dueDateLabel
 import com.apuntia.app.ui.components.ApuntiaIcons
-import com.apuntia.app.ui.components.ApuntiaSwitch
 import com.apuntia.app.ui.components.CategoryChip
 import com.apuntia.app.ui.components.CategoryShapeIcon
 import com.apuntia.app.ui.components.IconSquareButton
+import com.apuntia.app.ui.common.dueDateLabel
 import com.apuntia.app.ui.components.SegmentedControl
 import com.apuntia.app.ui.theme.ApuntiaTheme
 import com.apuntia.app.ui.theme.cardInk
 import com.apuntia.app.ui.theme.cardInkSoft
-import com.apuntia.app.ui.vault.VaultGate
 
 private const val BODY_MIN_LINES = 6
 private const val DISABLED_ALPHA = 0.4f
@@ -81,6 +82,15 @@ fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(fac
     val vaultOpen = vaultState == VaultState.UNLOCKED
     var enableRequested by rememberSaveable { mutableStateOf(false) }
     VaultEffects(vaultOpen, state.isBodyLocked, enableRequested, viewModel) { enableRequested = false }
+    // Si se agotaron los intentos del PIN, la nota que se quería abrir ya no existe: se avisa y se cierra.
+    val wasWiped = state.isBodyLocked && vaultState == VaultState.NO_PIN
+    val context = LocalContext.current
+    LaunchedEffect(wasWiped) {
+        if (wasWiped) {
+            Toast.makeText(context, R.string.vault_wiped_toast, Toast.LENGTH_LONG).show()
+            onClose()
+        }
+    }
     // Se cierra cuando el ViewModel avisa que terminó; así no depende de funciones que se pierdan al rotar.
     LaunchedEffect(state.isFinished) { if (state.isFinished) onClose() }
     if (!state.isLoaded) return
@@ -161,9 +171,7 @@ private fun EditorForm(
 @Composable
 private fun TrashLink(onClick: () -> Unit) {
     Box(
-        Modifier
-            .defaultMinSize(minHeight = 48.dp)
-            .clickable(role = Role.Button, onClick = onClick),
+        Modifier.defaultMinSize(minHeight = 48.dp).clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(
@@ -206,10 +214,7 @@ private fun EditorTopBar(isEditing: Boolean, canSave: Boolean, onBack: () -> Uni
         IconSquareButton(ApuntiaIcons.back, stringResource(R.string.editor_back), onBack)
         Text(
             stringResource(if (isEditing) R.string.editor_edit_title else R.string.editor_new_title),
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp)
-                .semantics { heading() },
+            modifier = Modifier.weight(1f).padding(horizontal = 12.dp).semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -274,12 +279,7 @@ private fun EditorCard(category: Category, viewModel: EditorViewModel) {
                     .padding(top = 4.dp, bottom = 8.dp)
                     .semantics { contentDescription = titleLabel },
             )
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(cardInk),
-            )
+            Box(Modifier.fillMaxWidth().height(3.dp).background(cardInk))
             FieldLabel(bodyLabel, Modifier.padding(top = 14.dp))
             BasicTextField(
                 state = viewModel.bodyState,

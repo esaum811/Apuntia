@@ -26,8 +26,11 @@ sealed interface VaultMessage {
     /** Los dos PIN escritos al crearlo no coinciden. */
     data object PinsDontMatch : VaultMessage
 
-    /** El PIN era incorrecto; quedan [attemptsLeft] intentos antes de un bloqueo temporal. */
-    data class WrongPin(val attemptsLeft: Int) : VaultMessage
+    /**
+     * El PIN era incorrecto; quedan [attemptsLeft] intentos antes de una espera o, si [willWipe],
+     * antes de que se borren las notas confidenciales.
+     */
+    data class WrongPin(val attemptsLeft: Int, val willWipe: Boolean) : VaultMessage
 
     /** Falló algo inesperado (por ejemplo, el Keystore del teléfono). */
     data object Failed : VaultMessage
@@ -38,11 +41,13 @@ sealed interface VaultMessage {
  *
  * @property message aviso a mostrar, o nulo.
  * @property lockedUntil hora (milisegundos) hasta la que hay que esperar por demasiados intentos; 0 si no hay espera.
+ * @property finalAttemptsLeft intentos que quedan antes de borrar las notas confidenciales, o nulo si aún no aplica.
  * @property isWorking verdadero mientras se comprueba el PIN; evita enviarlo dos veces.
  */
 data class VaultUiState(
     val message: VaultMessage? = null,
     val lockedUntil: Long = 0L,
+    val finalAttemptsLeft: Int? = null,
     val isWorking: Boolean = false,
 )
 
@@ -51,7 +56,7 @@ class VaultViewModel(
     private val vault: Vault,
     private val clock: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(VaultUiState())
+    private val mutableState = MutableStateFlow(VaultUiState(finalAttemptsLeft = vault.finalAttemptsLeft()))
 
     /** Texto del PIN. */
     val pinState = TextFieldState()
@@ -81,7 +86,7 @@ class VaultViewModel(
             } finally {
                 pinState.clearText()
                 confirmState.clearText()
-                mutableState.update { it.copy(isWorking = false) }
+                mutableState.update { it.copy(isWorking = false, finalAttemptsLeft = vault.finalAttemptsLeft()) }
             }
         }
     }
@@ -99,7 +104,11 @@ class VaultViewModel(
         when (val result = vault.unlock(pinState.text.toString())) {
             UnlockResult.Success -> Unit
             is UnlockResult.WrongPin ->
-                mutableState.update { it.copy(message = VaultMessage.WrongPin(result.attemptsLeft)) }
+                mutableState.update {
+                    it.copy(message = VaultMessage.WrongPin(result.attemptsLeft, result.willWipe))
+                }
+            // Al borrarse todo, la bóveda queda sin PIN; la pantalla y el editor reaccionan solos a ese cambio.
+            UnlockResult.Wiped -> Unit
             is UnlockResult.LockedOut ->
                 mutableState.update { it.copy(lockedUntil = clock() + result.remainingMillis) }
         }

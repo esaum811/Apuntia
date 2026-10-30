@@ -11,6 +11,9 @@ interface VaultStorage {
 
     /** Guarda varios valores a la vez. Devuelve falso si no se pudieron guardar. */
     fun write(values: Map<String, String>): Boolean
+
+    /** Borra todo lo guardado. Devuelve falso si no se pudo. */
+    fun clear(): Boolean
 }
 
 /** Guarda los datos de la bóveda en un archivo privado de la app. */
@@ -25,4 +28,6 @@ class SharedPrefsVaultStorage(context: Context) : VaultStorage {
         values.forEach { (key, value) -> editor.putString(key, value) }
         return editor.commit()
     }
+
+    override fun clear(): Boolean = prefs.edit().clear().commit()
 }

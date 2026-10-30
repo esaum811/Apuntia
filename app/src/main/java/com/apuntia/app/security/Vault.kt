@@ -22,9 +22,10 @@ sealed interface UnlockResult {
     /**
      * El PIN era incorrecto.
      *
-     * @property attemptsLeft intentos que quedan antes de un bloqueo temporal.
+     * @property attemptsLeft intentos que quedan antes del siguiente paso.
+     * @property willWipe verdadero si ese siguiente paso es borrar las notas confidenciales para siempre.
      */
-    data class WrongPin(val attemptsLeft: Int) : UnlockResult
+    data class WrongPin(val attemptsLeft: Int, val willWipe: Boolean) : UnlockResult
 
     /**
      * Hubo demasiados intentos fallidos y hay que esperar.
@@ -32,6 +33,9 @@ sealed interface UnlockResult {
      * @property remainingMillis tiempo que falta para poder intentar de nuevo.
      */
     data class LockedOut(val remainingMillis: Long) : UnlockResult
+
+    /** Se agotaron todos los intentos: las notas confidenciales se borraron y se quitó el PIN. */
+    data object Wiped : UnlockResult
 }
 
 /**
@@ -49,6 +53,12 @@ interface Vault {
 
     /** Intenta abrir la bóveda con [pin]. */
     suspend fun unlock(pin: String): UnlockResult
+
+    /**
+     * Intentos que quedan antes de que se borren las notas confidenciales, o nulo mientras
+     * todavía no se llega a esa etapa.
+     */
+    fun finalAttemptsLeft(): Int?
 
     /** Cierra la bóveda; hay que volver a poner el PIN para leer contenido confidencial. */
     fun lock()
