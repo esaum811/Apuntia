@@ -1,8 +1,8 @@
 package com.apuntia.app.ui.editor
 
+import android.util.Log
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apuntia.app.core.IdGenerator
@@ -11,6 +11,7 @@ import com.apuntia.app.domain.model.Entry
 import com.apuntia.app.domain.model.EntryType
 import com.apuntia.app.domain.repository.CategoryRepository
 import com.apuntia.app.domain.repository.EntryRepository
+import com.apuntia.app.security.Vault
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,8 @@ private const val TAG = "Apuntia"
  * @property categoryId categoría elegida.
  * @property categories categorías disponibles.
  * @property dueAt fecha límite de la tarea (milisegundos UTC), o nulo si no tiene.
+ * @property isConfidential verdadero si el contenido de la nota va cifrado y protegido con PIN.
+ * @property isBodyLocked verdadero si es una nota confidencial cuyo contenido aún no se descifra.
  * @property isSaving verdadero mientras se guarda; evita guardar dos veces con un doble toque.
  * @property isFinished verdadero cuando terminó de guardar o borrar y hay que cerrar el editor.
  * @property hasError verdadero si no se pudo guardar y hay que avisar al usuario.
@@ -41,6 +44,8 @@ data class EditorUiState(
     val categoryId: String = "",
     val categories: List<Category> = emptyList(),
     val dueAt: Long? = null,
+    val isConfidential: Boolean = false,
+    val isBodyLocked: Boolean = false,
     val isSaving: Boolean = false,
     val isFinished: Boolean = false,
     val hasError: Boolean = false,
@@ -57,6 +62,7 @@ class EditorViewModel(
     private val initialType: EntryType?,
     private val entries: EntryRepository,
     categories: CategoryRepository,
+    private val vault: Vault,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(EditorUiState())
     private var existing: Entry? = null
@@ -66,6 +72,9 @@ class EditorViewModel(
 
     /** Texto del contenido. */
     val bodyState = TextFieldState()
+
+    /** Situación de la bóveda; el editor la usa para pedir el PIN cuando hace falta. */
+    val vaultState = vault.state
 
     /** Estado actual del editor. */
     val uiState: StateFlow<EditorUiState> = mutableState.asStateFlow()
@@ -77,6 +86,7 @@ class EditorViewModel(
                 val entry = entryId?.let { entries.get(it) }
                 existing = entry
                 titleState.setTextAndPlaceCursorAtEnd(entry?.title.orEmpty())
+                // El contenido de una nota confidencial se descifra después, cuando la bóveda está abierta.
                 bodyState.setTextAndPlaceCursorAtEnd(entry?.body.orEmpty())
                 mutableState.value = EditorUiState(
                     isLoaded = true,
@@ -85,13 +95,33 @@ class EditorViewModel(
                     categoryId = entry?.categoryId ?: allCategories.firstOrNull()?.id.orEmpty(),
                     categories = allCategories,
                     dueAt = entry?.dueAt,
+                    isConfidential = entry?.isConfidential == true,
+                    isBodyLocked = entry?.isConfidential == true,
                 )
             }
         }
     }
 
     /** Cambia entre nota y tarea. */
-    fun selectType(type: EntryType) = mutableState.update { it.copy(type = type) }
+    fun selectType(type: EntryType) = mutableState.update {
+        // Solo las notas pueden ser confidenciales.
+        it.copy(type = type, isConfidential = it.isConfidential && type == EntryType.NOTE)
+    }
+
+    /** Marca o desmarca la nota como confidencial. Para marcarla la bóveda debe estar abierta. */
+    fun setConfidential(value: Boolean) = mutableState.update { it.copy(isConfidential = value) }
+
+    /** Descifra el contenido de la nota confidencial que se está editando. La bóveda debe estar abierta. */
+    fun loadConfidentialBody() {
+        val id = existing?.id ?: return
+        viewModelScope.launch {
+            guarded(onError = { mutableState.update { it.copy(hasError = true) } }) {
+                val blob = entries.getEncryptedBody(id)
+                bodyState.setTextAndPlaceCursorAtEnd(blob?.let(vault::decrypt).orEmpty())
+                mutableState.update { it.copy(isBodyLocked = false, hasError = false) }
+            }
+        }
+    }
 
     /** Cambia la fecha límite de la tarea; nulo la quita. */
     fun setDueAt(millis: Long?) = mutableState.update { it.copy(dueAt = millis) }
@@ -106,14 +136,26 @@ class EditorViewModel(
     fun save() {
         val title = titleState.text.toString().trim()
         val state = mutableState.value
-        if (title.isEmpty() || state.categoryId.isEmpty() || state.isSaving) return
+        // No se guarda mientras se guarda otra vez ni con el contenido confidencial todavía cifrado.
+        val isBusy = state.isSaving || state.isBodyLocked
+        if (title.isEmpty() || state.categoryId.isEmpty() || isBusy) return
         val body = bodyState.text.toString().trim()
         // La entrada nueva se crea una sola vez; si el guardado falla y se reintenta, conserva su id.
         val base = existing ?: newEntry(state.categoryId).also { existing = it }
         runSaving {
             val dueAt = if (state.type == EntryType.TASK) state.dueAt else null
+            val confidential = state.isConfidential && state.type == EntryType.NOTE
+            // El texto de una nota confidencial nunca llega a la base de datos sin cifrar.
             entries.save(
-                base.copy(title = title, body = body, type = state.type, categoryId = state.categoryId, dueAt = dueAt),
+                base.copy(
+                    title = title,
+                    body = if (confidential) "" else body,
+                    type = state.type,
+                    categoryId = state.categoryId,
+                    dueAt = dueAt,
+                    isConfidential = confidential,
+                ),
+                encryptedBody = if (confidential) vault.encrypt(body) else null,
             )
         }
     }

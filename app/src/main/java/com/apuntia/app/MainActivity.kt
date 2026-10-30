@@ -13,6 +13,19 @@ import com.apuntia.app.ui.theme.ApuntiaTheme
  * Es el único punto de entrada de la interfaz: configura el tema y muestra la app en Jetpack Compose.
  */
 class MainActivity : ComponentActivity() {
+    private val autoLock get() = (application as ApuntiaApplication).container.vaultAutoLock
+
+    override fun onStart() {
+        super.onStart()
+        autoLock.onForegrounded()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Girar la pantalla también detiene la actividad; eso no cuenta como salir de la app.
+        if (!isChangingConfigurations) autoLock.onBackgrounded()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

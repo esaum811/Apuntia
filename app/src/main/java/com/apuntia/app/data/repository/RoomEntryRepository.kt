@@ -32,11 +32,16 @@ class RoomEntryRepository(
 
     override suspend fun get(id: String): Entry? = dao.getById(id)?.toDomain()
 
-    override suspend fun save(entry: Entry) {
-        // Un contenido confidencial nunca debe quedar en texto plano; se habilita con el bloqueo por PIN.
-        check(!entry.isConfidential) { "Las entradas confidenciales todavía no se pueden guardar" }
-        dao.upsert(entry.copy(updatedAt = clock()).toEntity())
+    override suspend fun save(entry: Entry, encryptedBody: ByteArray?) {
+        // Un contenido confidencial nunca debe quedar en texto plano en la base de datos.
+        require(entry.isConfidential == (encryptedBody != null)) {
+            "Una entrada confidencial se guarda con su contenido cifrado, y una normal sin él"
+        }
+        require(!entry.isConfidential || entry.body.isEmpty()) { "El texto de una entrada confidencial va cifrado" }
+        dao.upsert(entry.copy(updatedAt = clock()).toEntity(encryptedBody))
     }
+
+    override suspend fun getEncryptedBody(id: String): ByteArray? = dao.getById(id)?.bodyEncrypted
 
     override suspend fun setDone(id: String, isDone: Boolean) = dao.setDone(id, isDone, clock())
 

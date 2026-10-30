@@ -64,6 +64,10 @@ interface EntryDao {
     @Query("DELETE FROM entries WHERE id = :id")
     suspend fun deleteForever(id: String)
 
+    /** Borra para siempre todas las entradas confidenciales, incluidas las de la papelera. */
+    @Query("DELETE FROM entries WHERE isConfidential = 1")
+    suspend fun deleteConfidential()
+
     /** Borra para siempre lo que lleva en la papelera desde antes de [olderThan]. */
     @Query("DELETE FROM entries WHERE deletedAt IS NOT NULL AND deletedAt < :olderThan")
     suspend fun purgeTrashOlderThan(olderThan: Long)

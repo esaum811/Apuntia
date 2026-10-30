@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="note_protected">Contenido protegido</string>
+
+    <string name="editor_confidential_label">Nota confidencial</string>
+    <string name="editor_confidential_hint">Se cifra y se abre con tu PIN</string>
+    <string name="editor_error_open">No se pudo abrir el contenido confidencial.</string>
+
+    <string name="vault_create_title">Crea tu PIN</string>
+    <string name="vault_unlock_title">Notas confidenciales</string>
+    <string name="vault_pin_label">PIN</string>
+    <string name="vault_confirm_label">Repite el PIN</string>
+    <string name="vault_create_action">Crear PIN</string>
+    <string name="vault_unlock_action">Desbloquear</string>
+    <string name="vault_warning_title">Guárdalo bien</string>
+    <string name="vault_warning_message">Si olvidas tu PIN no hay forma de recuperarlo: Apuntia no tiene cuentas ni servidor. Tus notas confidenciales quedarían ilegibles para siempre.</string>
+    <string name="vault_error_invalid">El PIN debe tener de %1$d a %2$d números.</string>
+    <string name="vault_error_mismatch">Los dos PIN no coinciden.</string>
+    <string name="vault_error_wrong">PIN incorrecto. Te quedan %1$d intentos antes de una espera.</string>
+    <string name="vault_error_failed">No se pudo comprobar el PIN. Inténtalo de nuevo.</string>
+    <string name="vault_locked_out">Demasiados intentos. Vuelve a intentar en %1$s.</string>
+</resources>

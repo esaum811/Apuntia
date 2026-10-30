@@ -19,9 +19,14 @@ interface EntryRepository {
 
     /**
      * Guarda una entrada nueva o modificada y actualiza su fecha de modificación.
-     * Las entradas confidenciales todavía no se pueden guardar: se habilitan con el bloqueo por PIN.
+     *
+     * Una entrada confidencial debe llegar con [Entry.body] vacío y su contenido ya cifrado en
+     * [encryptedBody]; una normal no lleva [encryptedBody]. Si no se cumple, lanza una excepción.
      */
-    suspend fun save(entry: Entry)
+    suspend fun save(entry: Entry, encryptedBody: ByteArray? = null)
+
+    /** Contenido cifrado de la entrada confidencial [id], o nulo si no existe o no es confidencial. */
+    suspend fun getEncryptedBody(id: String): ByteArray?
 
     /** Marca una tarea como terminada o pendiente. */
     suspend fun setDone(id: String, isDone: Boolean)

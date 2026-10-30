@@ -28,7 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -47,16 +50,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apuntia.app.R
 import com.apuntia.app.domain.model.Category
 import com.apuntia.app.domain.model.EntryType
+import com.apuntia.app.security.VaultState
 import com.apuntia.app.ui.AppViewModelProvider
+import com.apuntia.app.ui.common.SecureWindow
+import com.apuntia.app.ui.common.dueDateLabel
 import com.apuntia.app.ui.components.ApuntiaIcons
+import com.apuntia.app.ui.components.ApuntiaSwitch
 import com.apuntia.app.ui.components.CategoryChip
 import com.apuntia.app.ui.components.CategoryShapeIcon
 import com.apuntia.app.ui.components.IconSquareButton
-import com.apuntia.app.ui.common.dueDateLabel
 import com.apuntia.app.ui.components.SegmentedControl
 import com.apuntia.app.ui.theme.ApuntiaTheme
 import com.apuntia.app.ui.theme.cardInk
 import com.apuntia.app.ui.theme.cardInkSoft
+import com.apuntia.app.ui.vault.VaultGate
 
 private const val BODY_MIN_LINES = 6
 private const val DISABLED_ALPHA = 0.4f
@@ -70,9 +77,52 @@ private const val BODY_TINT = 0.4f
 @Composable
 fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(factory = AppViewModelProvider.Factory)) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val vaultState by viewModel.vaultState.collectAsStateWithLifecycle()
+    val vaultOpen = vaultState == VaultState.UNLOCKED
+    var enableRequested by rememberSaveable { mutableStateOf(false) }
+    VaultEffects(vaultOpen, state.isBodyLocked, enableRequested, viewModel) { enableRequested = false }
     // Se cierra cuando el ViewModel avisa que terminó; así no depende de funciones que se pierdan al rotar.
     LaunchedEffect(state.isFinished) { if (state.isFinished) onClose() }
     if (!state.isLoaded) return
+    if (state.isConfidential || state.isBodyLocked) SecureWindow()
+    val needsPin = state.isBodyLocked || state.isConfidential || enableRequested
+    Box(Modifier.fillMaxSize()) {
+        EditorForm(state, vaultOpen, viewModel, onClose, onRequestConfidential = { enableRequested = true })
+        if (!vaultOpen && needsPin) {
+            // Pide el PIN encima del editor. Si cancela, deja de pedirlo o cierra el editor.
+            VaultGate(onCancel = { if (enableRequested) enableRequested = false else onClose() })
+        }
+    }
+}
+
+// Con la bóveda abierta se descifra el contenido pendiente o se activa lo que el usuario pidió.
+@Composable
+private fun VaultEffects(
+    vaultOpen: Boolean,
+    isBodyLocked: Boolean,
+    enableRequested: Boolean,
+    viewModel: EditorViewModel,
+    onEnabled: () -> Unit,
+) {
+    LaunchedEffect(vaultOpen, isBodyLocked) {
+        if (vaultOpen && isBodyLocked) viewModel.loadConfidentialBody()
+    }
+    LaunchedEffect(vaultOpen, enableRequested) {
+        if (vaultOpen && enableRequested) {
+            viewModel.setConfidential(true)
+            onEnabled()
+        }
+    }
+}
+
+@Composable
+private fun EditorForm(
+    state: EditorUiState,
+    vaultOpen: Boolean,
+    viewModel: EditorViewModel,
+    onClose: () -> Unit,
+    onRequestConfidential: () -> Unit,
+) {
     val canSave by remember { derivedStateOf { viewModel.titleState.text.isNotBlank() && !state.isSaving } }
     Column(
         Modifier
@@ -87,7 +137,7 @@ fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(fac
         EditorTopBar(state.isEditing, canSave, onBack = onClose, onSave = viewModel::save)
         if (state.hasError) {
             Text(
-                stringResource(R.string.editor_error_save),
+                stringResource(if (state.isBodyLocked) R.string.editor_error_open else R.string.editor_error_save),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -99,21 +149,53 @@ fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(fac
         CategoryPicker(state, viewModel::selectCategory)
         if (state.type == EntryType.TASK) {
             DueDateRow(state.dueAt, onChange = viewModel::setDueAt)
-        }
-        if (state.isEditing) {
-            Box(
-                Modifier
-                    .defaultMinSize(minHeight = 48.dp)
-                    .clickable(role = Role.Button, onClick = viewModel::moveToTrash),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Text(
-                    stringResource(R.string.editor_trash),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
+        } else {
+            ConfidentialRow(state.isConfidential) { wanted ->
+                if (wanted && !vaultOpen) onRequestConfidential() else viewModel.setConfidential(wanted)
             }
         }
+        if (state.isEditing) TrashLink(viewModel::moveToTrash)
+    }
+}
+
+@Composable
+private fun TrashLink(onClick: () -> Unit) {
+    Box(
+        Modifier
+            .defaultMinSize(minHeight = 48.dp)
+            .clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            stringResource(R.string.editor_trash),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+}
+
+@Composable
+private fun ConfidentialRow(checked: Boolean, onChange: (Boolean) -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val label = stringResource(R.string.editor_confidential_label)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(scheme.surfaceVariant, RoundedCornerShape(22.dp))
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(ApuntiaIcons.lock, contentDescription = null, tint = scheme.onBackground, modifier = Modifier.size(24.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = scheme.onBackground)
+            Text(
+                stringResource(R.string.editor_confidential_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+            )
+        }
+        ApuntiaSwitch(checked, onChange, label)
     }
 }
 
@@ -124,7 +206,10 @@ private fun EditorTopBar(isEditing: Boolean, canSave: Boolean, onBack: () -> Uni
         IconSquareButton(ApuntiaIcons.back, stringResource(R.string.editor_back), onBack)
         Text(
             stringResource(if (isEditing) R.string.editor_edit_title else R.string.editor_new_title),
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp).semantics { heading() },
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp)
+                .semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -189,7 +274,12 @@ private fun EditorCard(category: Category, viewModel: EditorViewModel) {
                     .padding(top = 4.dp, bottom = 8.dp)
                     .semantics { contentDescription = titleLabel },
             )
-            Box(Modifier.fillMaxWidth().height(3.dp).background(cardInk))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(cardInk),
+            )
             FieldLabel(bodyLabel, Modifier.padding(top = 14.dp))
             BasicTextField(
                 state = viewModel.bodyState,

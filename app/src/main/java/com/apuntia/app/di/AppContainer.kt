@@ -13,7 +13,14 @@ import com.apuntia.app.domain.repository.CategoryRepository
 import com.apuntia.app.domain.repository.EntryRepository
 import com.apuntia.app.domain.repository.ReminderRepository
 import com.apuntia.app.security.DatabaseKeyProvider
+import com.apuntia.app.security.KeystoreKeyWrapper
+import com.apuntia.app.security.PinVault
+import com.apuntia.app.security.SharedPrefsVaultStorage
+import com.apuntia.app.security.Vault
+import com.apuntia.app.security.VaultAutoLock
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +45,18 @@ class AppContainer(context: Context) {
         ApuntiaDatabaseFactory.create(appContext, DatabaseKeyProvider(appContext).getOrCreatePassphrase())
     }
 
+    /** Bóveda de las notas confidenciales (PIN y cifrado). */
+    val vault: Vault by lazy { PinVault(SharedPrefsVaultStorage(appContext), KeystoreKeyWrapper()) }
+
+    /** Cierra la bóveda cuando la app pasa un rato en segundo plano. */
+    val vaultAutoLock: VaultAutoLock by lazy {
+        // Solo toca la bóveda cuando ya está lista: así no se lee disco en el hilo principal.
+        VaultAutoLock(
+            lockAction = { if (status.value == DatabaseStatus.READY) vault.lock() },
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        )
+    }
+
     /** Programa y cancela las alarmas en el sistema. */
     val alarmScheduler: AlarmScheduler by lazy { AndroidAlarmScheduler(appContext) }
 
@@ -59,6 +78,8 @@ class AppContainer(context: Context) {
         // Se captura todo error de arranque (Keystore, SQLCipher, disco) para mostrar un aviso en vez de cerrarse.
         @Suppress("TooGenericExceptionCaught")
         try {
+            // Cierra la bóveda al arrancar y, de paso, la inicializa fuera del hilo principal (lee un archivo).
+            vault.lock()
             categories.ensureDefaults()
             entries.purgeOldTrash()
             mutableStatus.value = DatabaseStatus.READY

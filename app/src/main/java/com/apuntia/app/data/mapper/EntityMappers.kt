@@ -30,8 +30,8 @@ fun EntryEntity.toDomain() = Entry(
     deletedAt = deletedAt,
 )
 
-/** Convierte una entrada del dominio en una para la base de datos. */
-fun Entry.toEntity() = EntryEntity(
+/** Convierte una entrada del dominio en una para la base de datos, con su contenido cifrado si es confidencial. */
+fun Entry.toEntity(bodyEncrypted: ByteArray? = null) = EntryEntity(
     id = id,
     categoryId = categoryId,
     type = type,
@@ -40,7 +40,7 @@ fun Entry.toEntity() = EntryEntity(
     isDone = isDone,
     dueAt = dueAt,
     isConfidential = isConfidential,
-    bodyEncrypted = null,
+    bodyEncrypted = bodyEncrypted,
     isPinned = isPinned,
     createdAt = createdAt,
     updatedAt = updatedAt,

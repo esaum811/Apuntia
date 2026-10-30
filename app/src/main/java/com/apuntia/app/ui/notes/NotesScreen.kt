@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -96,6 +98,18 @@ private fun CategoryFilters(state: NotesUiState, onSelect: (String?) -> Unit) {
 }
 
 @Composable
+private fun ProtectedLabel() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(ApuntiaIcons.lock, contentDescription = null, tint = cardInkSoft, modifier = Modifier.size(18.dp))
+        Text(
+            stringResource(R.string.note_protected),
+            style = MaterialTheme.typography.bodyMedium,
+            color = cardInkSoft,
+        )
+    }
+}
+
+@Composable
 private fun NoteCard(item: NoteItem, onClick: () -> Unit) {
     val entry = item.entry
     CategoryCard(
@@ -106,7 +120,9 @@ private fun NoteCard(item: NoteItem, onClick: () -> Unit) {
         modifier = Modifier.padding(horizontal = 20.dp),
     ) {
         Text(entry.title, style = MaterialTheme.typography.titleMedium, color = cardInk)
-        if (entry.body.isNotBlank()) {
+        if (entry.isConfidential) {
+            ProtectedLabel()
+        } else if (entry.body.isNotBlank()) {
             Text(
                 entry.body,
                 style = MaterialTheme.typography.bodyMedium,
