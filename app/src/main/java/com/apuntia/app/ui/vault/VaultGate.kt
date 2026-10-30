@@ -66,14 +66,22 @@ private val PinInput = InputTransformation {
  * Pantalla completa para crear el PIN (la primera vez) o desbloquear las notas confidenciales.
  * Se dibuja encima de lo que haya y no deja hacer capturas de pantalla.
  *
+ * @param targetId nota que se quiere abrir, o nulo si no es para abrir una nota concreta.
  * @param onCancel se llama al tocar el botón de volver.
+ * @param onWiped se llama cuando se agotan los intentos y se borra contenido; recibe verdadero si fue todo.
  */
 @Composable
-fun VaultGate(onCancel: () -> Unit, viewModel: VaultViewModel = viewModel(factory = AppViewModelProvider.Factory)) {
+fun VaultGate(
+    targetId: String?,
+    onCancel: () -> Unit,
+    onWiped: (everything: Boolean) -> Unit,
+    viewModel: VaultViewModel = viewModel(factory = AppViewModelProvider.Factory),
+) {
     SecureWindow()
     val vaultState by viewModel.vaultState.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val creating = vaultState == VaultState.NO_PIN
+    LaunchedEffect(state.wipedEverything) { state.wipedEverything?.let(onWiped) }
     val waitSeconds by produceState(0L, state.lockedUntil) {
         while (true) {
             value = ((state.lockedUntil - System.currentTimeMillis()) / TICK_MS).coerceAtLeast(0L)
@@ -100,13 +108,13 @@ fun VaultGate(onCancel: () -> Unit, viewModel: VaultViewModel = viewModel(factor
             color = MaterialTheme.colorScheme.onBackground,
         )
         if (creating) WarningCard()
-        state.finalAttemptsLeft?.let { WipeWarning(it) }
+        state.finalAttemptsLeft?.let { WipeWarning(it, targetId != null) }
         PinField(stringResource(R.string.vault_pin_label), viewModel.pinState, autoFocus = true)
         if (creating) PinField(stringResource(R.string.vault_confirm_label), viewModel.confirmState)
-        Message(state.message, waitSeconds)
+        Message(state.message, waitSeconds, targetId != null)
         PrimaryButton(
             stringResource(if (creating) R.string.vault_create_action else R.string.vault_unlock_action),
-            onClick = viewModel::submit,
+            onClick = { viewModel.submit(targetId) },
         )
     }
 }
@@ -132,9 +140,12 @@ private fun WarningCard() {
 }
 
 @Composable
-private fun WipeWarning(attemptsLeft: Int) {
+private fun WipeWarning(attemptsLeft: Int, hasTarget: Boolean) {
     Text(
-        stringResource(R.string.vault_wipe_warning, attemptsLeft),
+        stringResource(
+            if (hasTarget) R.string.vault_wipe_warning_note else R.string.vault_wipe_warning_all,
+            attemptsLeft,
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.error, RoundedCornerShape(22.dp))
@@ -169,11 +180,11 @@ private fun PinField(label: String, state: TextFieldState, autoFocus: Boolean = 
 }
 
 @Composable
-private fun Message(message: VaultMessage?, waitSeconds: Long) {
+private fun Message(message: VaultMessage?, waitSeconds: Long, hasTarget: Boolean) {
     val text = when {
         waitSeconds > 0 -> stringResource(R.string.vault_locked_out, formatWait(waitSeconds))
         message == null -> return
-        else -> messageText(message)
+        else -> messageText(message, hasTarget)
     }
     Row(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
         Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
@@ -181,15 +192,18 @@ private fun Message(message: VaultMessage?, waitSeconds: Long) {
 }
 
 @Composable
-private fun messageText(message: VaultMessage): String = when (message) {
+private fun messageText(message: VaultMessage, hasTarget: Boolean): String = when (message) {
     VaultMessage.InvalidPin ->
         stringResource(R.string.vault_error_invalid, PinRules.MIN_LENGTH, PinRules.MAX_LENGTH)
     VaultMessage.PinsDontMatch -> stringResource(R.string.vault_error_mismatch)
-    is VaultMessage.WrongPin -> stringResource(
-        if (message.willWipe) R.string.vault_error_wrong_final else R.string.vault_error_wrong,
-        message.attemptsLeft,
-    )
+    is VaultMessage.WrongPin -> stringResource(wrongPinRes(message.willWipe, hasTarget), message.attemptsLeft)
     VaultMessage.Failed -> stringResource(R.string.vault_error_failed)
+}
+
+private fun wrongPinRes(willWipe: Boolean, hasTarget: Boolean): Int = when {
+    !willWipe -> R.string.vault_error_wrong
+    hasTarget -> R.string.vault_error_wrong_note
+    else -> R.string.vault_error_wrong_all
 }
 
 // Segundos a "m:ss", por ejemplo 75 -> "1:15".

@@ -42,12 +42,15 @@ sealed interface VaultMessage {
  * @property message aviso a mostrar, o nulo.
  * @property lockedUntil hora (milisegundos) hasta la que hay que esperar por demasiados intentos; 0 si no hay espera.
  * @property finalAttemptsLeft intentos que quedan antes de borrar las notas confidenciales, o nulo si aún no aplica.
+ * @property wipedEverything nulo si no se borró nada; verdadero si se borraron todas las notas confidenciales;
+ * falso si solo se borró la nota que se intentaba abrir.
  * @property isWorking verdadero mientras se comprueba el PIN; evita enviarlo dos veces.
  */
 data class VaultUiState(
     val message: VaultMessage? = null,
     val lockedUntil: Long = 0L,
     val finalAttemptsLeft: Int? = null,
+    val wipedEverything: Boolean? = null,
     val isWorking: Boolean = false,
 )
 
@@ -70,14 +73,18 @@ class VaultViewModel(
     /** Estado actual de la pantalla. */
     val uiState: StateFlow<VaultUiState> = mutableState.asStateFlow()
 
-    /** Crea el PIN o intenta abrir la bóveda, según haga falta. */
-    fun submit() {
+    /**
+     * Crea el PIN o intenta abrir la bóveda, según haga falta.
+     *
+     * @param targetId nota que se quiere abrir; es la que se borra si se agotan los intentos.
+     */
+    fun submit(targetId: String?) {
         if (mutableState.value.isWorking) return
         mutableState.update { it.copy(isWorking = true, message = null) }
         viewModelScope.launch {
             @Suppress("TooGenericExceptionCaught")
             try {
-                if (vault.state.value == VaultState.NO_PIN) create() else unlock()
+                if (vault.state.value == VaultState.NO_PIN) create() else unlock(targetId)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -100,15 +107,14 @@ class VaultViewModel(
         }
     }
 
-    private suspend fun unlock() {
-        when (val result = vault.unlock(pinState.text.toString())) {
+    private suspend fun unlock(targetId: String?) {
+        when (val result = vault.unlock(pinState.text.toString(), targetId)) {
             UnlockResult.Success -> Unit
             is UnlockResult.WrongPin ->
                 mutableState.update {
                     it.copy(message = VaultMessage.WrongPin(result.attemptsLeft, result.willWipe))
                 }
-            // Al borrarse todo, la bóveda queda sin PIN; la pantalla y el editor reaccionan solos a ese cambio.
-            UnlockResult.Wiped -> Unit
+            is UnlockResult.Wiped -> mutableState.update { it.copy(wipedEverything = result.everything) }
             is UnlockResult.LockedOut ->
                 mutableState.update { it.copy(lockedUntil = clock() + result.remainingMillis) }
         }

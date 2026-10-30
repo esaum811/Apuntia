@@ -34,8 +34,13 @@ sealed interface UnlockResult {
      */
     data class LockedOut(val remainingMillis: Long) : UnlockResult
 
-    /** Se agotaron todos los intentos: las notas confidenciales se borraron y se quitó el PIN. */
-    data object Wiped : UnlockResult
+    /**
+     * Se agotaron los intentos y se borró contenido.
+     *
+     * @property everything verdadero si se borraron todas las notas confidenciales y se quitó el PIN;
+     * falso si solo se borró la nota que se intentaba abrir (el PIN y las demás notas siguen).
+     */
+    data class Wiped(val everything: Boolean) : UnlockResult
 }
 
 /**
@@ -51,11 +56,16 @@ interface Vault {
     /** Crea el PIN y deja la bóveda abierta. Solo se puede usar cuando [state] es [VaultState.NO_PIN]. */
     suspend fun createPin(pin: String)
 
-    /** Intenta abrir la bóveda con [pin]. */
-    suspend fun unlock(pin: String): UnlockResult
+    /**
+     * Intenta abrir la bóveda con [pin].
+     *
+     * @param targetId nota que se quiere abrir. Si se agotan los intentos, solo se borra esa nota;
+     * con nulo se borran todas las notas confidenciales y se quita el PIN.
+     */
+    suspend fun unlock(pin: String, targetId: String? = null): UnlockResult
 
     /**
-     * Intentos que quedan antes de que se borren las notas confidenciales, o nulo mientras
+     * Intentos que quedan antes de que se borre contenido confidencial, o nulo mientras
      * todavía no se llega a esa etapa.
      */
     fun finalAttemptsLeft(): Int?

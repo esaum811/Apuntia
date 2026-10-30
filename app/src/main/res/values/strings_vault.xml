@@ -17,9 +17,12 @@
     <string name="vault_error_invalid">El PIN debe tener de %1$d a %2$d números.</string>
     <string name="vault_error_mismatch">Los dos PIN no coinciden.</string>
     <string name="vault_error_wrong">PIN incorrecto. Te quedan %1$d intentos antes de una espera.</string>
-    <string name="vault_error_wrong_final">PIN incorrecto. Te quedan %1$d intentos antes de que se borren tus notas confidenciales.</string>
-    <string name="vault_wipe_warning">Últimos intentos: te quedan %1$d. Si fallas, se borrarán para siempre todas tus notas confidenciales.</string>
-    <string name="vault_wiped_toast">Se agotaron los intentos: las notas confidenciales se borraron.</string>
+    <string name="vault_error_wrong_note">PIN incorrecto. Te quedan %1$d intentos antes de que se borre esta nota.</string>
+    <string name="vault_error_wrong_all">PIN incorrecto. Te quedan %1$d intentos antes de que se borren tus notas confidenciales.</string>
+    <string name="vault_wipe_warning_note">Últimos intentos: te quedan %1$d. Si fallas, se borrará para siempre la nota que intentas abrir.</string>
+    <string name="vault_wipe_warning_all">Últimos intentos: te quedan %1$d. Si fallas, se borrarán para siempre todas tus notas confidenciales.</string>
+    <string name="vault_wiped_note_toast">Se agotaron los intentos: la nota se borró.</string>
+    <string name="vault_wiped_all_toast">Se agotaron los intentos: las notas confidenciales se borraron.</string>
     <string name="vault_error_failed">No se pudo comprobar el PIN. Inténtalo de nuevo.</string>
-    <string name="vault_locked_out">Demasiados intentos. Vuelve a intentar en %1$s. Después tendrás 3 intentos más; si fallas, se borrarán para siempre tus notas confidenciales.</string>
+    <string name="vault_locked_out">Demasiados intentos. Vuelve a intentar en %1$s.</string>
 </resources>

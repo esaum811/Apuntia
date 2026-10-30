@@ -82,15 +82,7 @@ fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(fac
     val vaultOpen = vaultState == VaultState.UNLOCKED
     var enableRequested by rememberSaveable { mutableStateOf(false) }
     VaultEffects(vaultOpen, state.isBodyLocked, enableRequested, viewModel) { enableRequested = false }
-    // Si se agotaron los intentos del PIN, la nota que se quería abrir ya no existe: se avisa y se cierra.
-    val wasWiped = state.isBodyLocked && vaultState == VaultState.NO_PIN
     val context = LocalContext.current
-    LaunchedEffect(wasWiped) {
-        if (wasWiped) {
-            Toast.makeText(context, R.string.vault_wiped_toast, Toast.LENGTH_LONG).show()
-            onClose()
-        }
-    }
     // Se cierra cuando el ViewModel avisa que terminó; así no depende de funciones que se pierdan al rotar.
     LaunchedEffect(state.isFinished) { if (state.isFinished) onClose() }
     if (!state.isLoaded) return
@@ -100,7 +92,16 @@ fun EditorScreen(onClose: () -> Unit, viewModel: EditorViewModel = viewModel(fac
         EditorForm(state, vaultOpen, viewModel, onClose, onRequestConfidential = { enableRequested = true })
         if (!vaultOpen && needsPin) {
             // Pide el PIN encima del editor. Si cancela, deja de pedirlo o cierra el editor.
-            VaultGate(onCancel = { if (enableRequested) enableRequested = false else onClose() })
+            VaultGate(
+                targetId = viewModel.gateTarget,
+                onCancel = { if (enableRequested) enableRequested = false else onClose() },
+                onWiped = { everything ->
+                    val message = if (everything) R.string.vault_wiped_all_toast else R.string.vault_wiped_note_toast
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    // Si se borró la nota que se quería abrir, ya no hay nada que editar.
+                    if (!everything) onClose()
+                },
+            )
         }
     }
 }

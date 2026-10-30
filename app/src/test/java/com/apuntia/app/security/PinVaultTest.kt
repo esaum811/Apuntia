@@ -13,7 +13,7 @@ class PinVaultTest {
     private val storage = FakeStorage()
     private var now = 1_000_000L
 
-    private fun newVault(onWipe: suspend () -> Unit = {}) =
+    private fun newVault(onWipe: suspend (String?) -> Unit = {}) =
         PinVault(storage, IdentityWrapper(), clock = { now }, iterations = TEST_ITERATIONS, onWipe = onWipe)
 
     @Test
@@ -93,7 +93,7 @@ class PinVaultTest {
     }
 
     @Test
-    fun threeMoreFailuresAfterTheWaitWipeEverything() = runBlocking {
+    fun withoutATargetThreeMoreFailuresAfterTheWaitWipeEverything() = runBlocking {
         var wiped = 0
         val vault = newVault(onWipe = { wiped++ }).also { it.createPin("1234") }
         vault.lock()
@@ -102,10 +102,28 @@ class PinVaultTest {
         assertEquals(UnlockResult.WrongPin(attemptsLeft = 2, willWipe = true), vault.unlock("0000"))
         assertEquals(UnlockResult.WrongPin(attemptsLeft = 1, willWipe = true), vault.unlock("0000"))
         assertEquals(0, wiped)
-        assertEquals(UnlockResult.Wiped, vault.unlock("0000"))
+        assertEquals(UnlockResult.Wiped(everything = true), vault.unlock("0000"))
         assertEquals(1, wiped)
         assertEquals(VaultState.NO_PIN, vault.state.value)
         assertEquals(VaultState.NO_PIN, newVault().state.value)
+    }
+
+    @Test
+    fun withATargetOnlyThatNoteIsWipedAndThePinStays() = runBlocking {
+        val deleted = mutableListOf<String?>()
+        val vault = newVault(onWipe = { deleted += it }).also { it.createPin("1234") }
+        vault.lock()
+        repeat(5) { vault.unlock("0000", "nota-1") }
+        now += 121_000
+        repeat(2) { vault.unlock("0000", "nota-1") }
+        assertEquals(UnlockResult.Wiped(everything = false), vault.unlock("0000", "nota-1"))
+        assertEquals(listOf<String?>("nota-1"), deleted)
+        assertEquals(VaultState.LOCKED, vault.state.value)
+        // Vuelve la espera de 2 minutos y los 3 intentos para la siguiente nota.
+        assertTrue(vault.unlock("1234", "nota-2") is UnlockResult.LockedOut)
+        assertEquals(3, vault.finalAttemptsLeft())
+        now += 121_000
+        assertEquals(UnlockResult.Success, vault.unlock("1234", "nota-2"))
     }
 
     @Test

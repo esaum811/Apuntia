@@ -73,6 +73,9 @@ class EditorViewModel(
     /** Texto del contenido. */
     val bodyState = TextFieldState()
 
+    /** Nota confidencial que se está abriendo, o nulo si no hay. Si se agotan los intentos del PIN, se borra esa. */
+    val gateTarget: String? get() = existing?.takeIf { it.isConfidential }?.id
+
     /** Situación de la bóveda; el editor la usa para pedir el PIN cuando hace falta. */
     val vaultState = vault.state
 

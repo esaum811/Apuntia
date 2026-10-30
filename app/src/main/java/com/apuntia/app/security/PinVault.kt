@@ -29,20 +29,21 @@ private const val BITS_PER_BYTE = 8
  * Una llave aleatoria cifra las notas. Esa llave se guarda cifrada dos veces: con una llave sacada
  * del PIN (PBKDF2) y con una llave del Android Keystore. Para abrirla hacen falta el PIN y este teléfono.
  * Tras 5 intentos fallidos hay que esperar 2 minutos; después quedan 3 intentos más y, si todos
- * fallan, se borran para siempre las notas confidenciales y se quita el PIN.
+ * fallan, se borra para siempre la nota que se intentaba abrir. Tras ese borrado se repite la
+ * espera y los 3 intentos para la siguiente nota.
  *
  * @param storage dónde se guardan los datos protegidos.
  * @param wrapper llave del teléfono que envuelve la llave de la bóveda.
  * @param clock hora actual en milisegundos; se cambia en las pruebas.
  * @param iterations vueltas de PBKDF2; las pruebas usan menos para ir rápido.
- * @param onWipe borra las notas confidenciales de la base de datos cuando se agotan los intentos.
+ * @param onWipe borra de la base de datos la nota confidencial indicada, o todas si recibe nulo.
  */
 class PinVault(
     private val storage: VaultStorage,
     private val wrapper: KeyWrapper,
     private val clock: () -> Long = System::currentTimeMillis,
     private val iterations: Int = PBKDF2_ITERATIONS,
-    private val onWipe: suspend () -> Unit = {},
+    private val onWipe: suspend (targetId: String?) -> Unit = {},
 ) : Vault {
     private val random = SecureRandom()
 
@@ -76,7 +77,7 @@ class PinVault(
         mutableState.value = VaultState.UNLOCKED
     }
 
-    override suspend fun unlock(pin: String): UnlockResult {
+    override suspend fun unlock(pin: String, targetId: String?): UnlockResult {
         val remaining = readLong(KEY_LOCKED_UNTIL) - clock()
         if (remaining > 0) return UnlockResult.LockedOut(remaining)
         val salt = decode(checkNotNull(storage.read(KEY_SALT)) { "No hay PIN" })
@@ -89,7 +90,7 @@ class PinVault(
                 null
             }
         }
-        return if (vaultKey == null) registerFailure() else registerSuccess(vaultKey)
+        return if (vaultKey == null) registerFailure(targetId) else registerSuccess(vaultKey)
     }
 
     private fun registerSuccess(vaultKey: ByteArray): UnlockResult {
@@ -99,11 +100,11 @@ class PinVault(
         return UnlockResult.Success
     }
 
-    private suspend fun registerFailure(): UnlockResult {
+    private suspend fun registerFailure(targetId: String?): UnlockResult {
         val failed = readLong(KEY_FAILED).toInt() + 1
         if (failed >= MAX_FAILURES) {
-            wipe()
-            return UnlockResult.Wiped
+            wipe(targetId)
+            return UnlockResult.Wiped(everything = targetId == null)
         }
         val lockedOut = failed == ATTEMPTS_BEFORE_LOCKOUT
         val lockedUntil = if (lockedOut) clock() + LOCKOUT_MS else 0L
@@ -117,13 +118,21 @@ class PinVault(
         }
     }
 
-    // Primero se borran las notas; solo si eso salió bien se quita el PIN. Así, si algo falla,
+    // Primero se borra el contenido; solo si eso salió bien se actualiza el estado. Así, si algo falla,
     // el siguiente intento fallido vuelve a intentar el borrado.
-    private suspend fun wipe() {
-        onWipe()
-        check(storage.clear()) { "No se pudo quitar el PIN" }
-        key = null
-        mutableState.value = VaultState.NO_PIN
+    private suspend fun wipe(targetId: String?) {
+        onWipe(targetId)
+        if (targetId == null) {
+            check(storage.clear()) { "No se pudo quitar el PIN" }
+            key = null
+            mutableState.value = VaultState.NO_PIN
+        } else {
+            // Se borró una sola nota: el PIN sigue, pero se vuelve a la etapa de espera y 3 intentos.
+            val lockedUntil = clock() + LOCKOUT_MS
+            storage.write(
+                mapOf(KEY_FAILED to ATTEMPTS_BEFORE_LOCKOUT.toString(), KEY_LOCKED_UNTIL to lockedUntil.toString()),
+            )
+        }
     }
 
     override fun finalAttemptsLeft(): Int? {

@@ -47,7 +47,12 @@ class AppContainer(context: Context) {
 
     /** Bóveda de las notas confidenciales (PIN y cifrado). */
     val vault: Vault by lazy {
-        PinVault(SharedPrefsVaultStorage(appContext), KeystoreKeyWrapper(), onWipe = { entries.deleteConfidential() })
+        PinVault(
+            SharedPrefsVaultStorage(appContext),
+            KeystoreKeyWrapper(),
+            // Con una nota indicada solo se borra esa; sin ella, todas las confidenciales.
+            onWipe = { id -> if (id == null) entries.deleteConfidential() else entries.deleteForever(id) },
+        )
     }
 
     /** Cierra la bóveda cuando la app pasa un rato en segundo plano. */
