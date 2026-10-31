@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation("androidx.biometric:biometric:1.1.0")
 }
 
 // Ktlint: formato de código según .editorconfig y la guía de Android.

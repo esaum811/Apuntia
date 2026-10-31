@@ -12,6 +12,9 @@ interface VaultStorage {
     /** Guarda varios valores a la vez. Devuelve falso si no se pudieron guardar. */
     fun write(values: Map<String, String>): Boolean
 
+    /** Borra los valores guardados con [keys]. Devuelve falso si no se pudo. */
+    fun remove(keys: Set<String>): Boolean
+
     /** Borra todo lo guardado. Devuelve falso si no se pudo. */
     fun clear(): Boolean
 }
@@ -26,6 +29,12 @@ class SharedPrefsVaultStorage(context: Context) : VaultStorage {
     override fun write(values: Map<String, String>): Boolean {
         val editor = prefs.edit()
         values.forEach { (key, value) -> editor.putString(key, value) }
+        return editor.commit()
+    }
+
+    override fun remove(keys: Set<String>): Boolean {
+        val editor = prefs.edit()
+        keys.forEach { editor.remove(it) }
         return editor.commit()
     }
 

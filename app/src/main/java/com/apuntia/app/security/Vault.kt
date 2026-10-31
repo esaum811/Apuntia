@@ -44,6 +44,14 @@ sealed interface UnlockResult {
 }
 
 /**
+ * La llave de la bóveda cifrada con una llave del teléfono que solo se libera con la huella.
+ *
+ * @property iv vector de inicialización usado al cifrar.
+ * @property blob llave de la bóveda ya cifrada.
+ */
+class BiometricSeal(val iv: ByteArray, val blob: ByteArray)
+
+/**
  * Guarda y protege el contenido de las notas confidenciales.
  *
  * El contenido se cifra con una llave que solo existe abierta mientras la bóveda está desbloqueada.
@@ -69,6 +77,30 @@ interface Vault {
      * todavía no se llega a esa etapa.
      */
     fun finalAttemptsLeft(): Int?
+
+    /**
+     * Cambia el PIN comprobando antes el actual. Cuenta como intento: si se agotan, aplica el mismo
+     * borrado que [unlock] sin nota indicada. La bóveda queda como estaba (abierta o cerrada).
+     */
+    suspend fun changePin(oldPin: String, newPin: String): UnlockResult
+
+    /** Datos para abrir con la huella, o nulo si la huella no está activada. */
+    fun biometricSeal(): BiometricSeal?
+
+    /**
+     * Activa la huella. [seal] recibe la llave de la bóveda y devuelve esa llave cifrada con una
+     * llave del teléfono ya autorizada por la huella. La bóveda debe estar abierta.
+     */
+    fun enableBiometric(seal: (ByteArray) -> BiometricSeal)
+
+    /**
+     * Abre la bóveda con la huella. [open] recibe lo guardado por [enableBiometric] y devuelve la
+     * llave de la bóveda descifrada con una llave del teléfono ya autorizada por la huella.
+     */
+    fun unlockWithBiometric(open: (BiometricSeal) -> ByteArray)
+
+    /** Desactiva la huella; desde entonces solo se abre con el PIN. */
+    fun disableBiometric()
 
     /** Cierra la bóveda; hay que volver a poner el PIN para leer contenido confidencial. */
     fun lock()

@@ -25,4 +25,19 @@
     <string name="vault_wiped_all_toast">Se agotaron los intentos: las notas confidenciales se borraron.</string>
     <string name="vault_error_failed">No se pudo comprobar el PIN. Inténtalo de nuevo.</string>
     <string name="vault_locked_out">Demasiados intentos. Vuelve a intentar en %1$s.</string>
+
+    <string name="vault_biometric_title">Abrir notas confidenciales</string>
+    <string name="vault_biometric_negative">Usar PIN</string>
+    <string name="vault_biometric_action">Usar huella</string>
+
+    <string name="settings_security">Seguridad</string>
+    <string name="settings_no_pin">Aún no tienes PIN. Se crea la primera vez que marcas una nota como confidencial.</string>
+    <string name="settings_biometric">Usar huella</string>
+    <string name="settings_biometric_hint">Abre tus notas confidenciales con tu huella, sin escribir el PIN.</string>
+    <string name="settings_biometric_missing">Registra una huella en los ajustes del teléfono para poder activar esta opción.</string>
+    <string name="settings_biometric_enroll_title">Activar huella en Apuntia</string>
+    <string name="settings_change_pin">Cambiar PIN</string>
+    <string name="settings_change_pin_action">Cambiar</string>
+    <string name="settings_pin_current">PIN actual</string>
+    <string name="settings_pin_new">PIN nuevo</string>
 </resources>

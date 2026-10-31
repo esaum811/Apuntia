@@ -15,6 +15,8 @@ private const val KEY_SALT = "salt"
 private const val KEY_WRAPPED = "wrapped_key"
 private const val KEY_FAILED = "failed_attempts"
 private const val KEY_LOCKED_UNTIL = "locked_until"
+private const val KEY_BIO_IV = "biometric_iv"
+private const val KEY_BIO_BLOB = "biometric_blob"
 private const val KEY_BYTES = 32
 private const val SALT_BYTES = 16
 private const val PBKDF2_ITERATIONS = 210_000
@@ -94,10 +96,51 @@ class PinVault(
     }
 
     private fun registerSuccess(vaultKey: ByteArray): UnlockResult {
+        markUnlocked(vaultKey)
+        return UnlockResult.Success
+    }
+
+    // Deja la bóveda abierta y borra el conteo de intentos fallidos.
+    private fun markUnlocked(vaultKey: ByteArray) {
         storage.write(mapOf(KEY_FAILED to "0", KEY_LOCKED_UNTIL to "0"))
         key = vaultKey
         mutableState.value = VaultState.UNLOCKED
-        return UnlockResult.Success
+    }
+
+    override suspend fun changePin(oldPin: String, newPin: String): UnlockResult {
+        require(PinRules.isValid(newPin)) { "El PIN no cumple las reglas" }
+        val wasLocked = mutableState.value != VaultState.UNLOCKED
+        val result = unlock(oldPin)
+        if (result == UnlockResult.Success) {
+            val salt = ByteArray(SALT_BYTES).also(random::nextBytes)
+            val wrapped = withContext(Dispatchers.Default) {
+                wrapper.wrap(AesGcm.encrypt(derive(newPin, salt, iterations), openKey()))
+            }
+            val saved = storage.write(mapOf(KEY_SALT to encode(salt), KEY_WRAPPED to encode(wrapped)))
+            check(saved) { "No se pudo guardar el PIN nuevo" }
+            if (wasLocked) lock()
+        }
+        return result
+    }
+
+    override fun biometricSeal(): BiometricSeal? {
+        val iv = storage.read(KEY_BIO_IV)
+        val blob = storage.read(KEY_BIO_BLOB)
+        return if (iv != null && blob != null) BiometricSeal(decode(iv), decode(blob)) else null
+    }
+
+    override fun enableBiometric(seal: (ByteArray) -> BiometricSeal) {
+        val sealed = seal(openKey())
+        val saved = storage.write(mapOf(KEY_BIO_IV to encode(sealed.iv), KEY_BIO_BLOB to encode(sealed.blob)))
+        check(saved) { "No se pudo guardar la huella" }
+    }
+
+    override fun unlockWithBiometric(open: (BiometricSeal) -> ByteArray) {
+        markUnlocked(open(checkNotNull(biometricSeal()) { "La huella no está activada" }))
+    }
+
+    override fun disableBiometric() {
+        storage.remove(setOf(KEY_BIO_IV, KEY_BIO_BLOB))
     }
 
     private suspend fun registerFailure(targetId: String?): UnlockResult {

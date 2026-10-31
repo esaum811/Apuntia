@@ -15,6 +15,7 @@ import com.apuntia.app.ui.navigation.Routes
 import com.apuntia.app.ui.notes.NotesViewModel
 import com.apuntia.app.ui.tasks.TasksViewModel
 import com.apuntia.app.ui.trash.TrashViewModel
+import com.apuntia.app.ui.settings.SettingsViewModel
 import com.apuntia.app.ui.vault.VaultViewModel
 
 private fun CreationExtras.container(): AppContainer = (this[APPLICATION_KEY] as ApuntiaApplication).container
@@ -44,6 +45,7 @@ object AppViewModelProvider {
                 vault = container().vault,
             )
         }
-        initializer { VaultViewModel(container().vault) }
+        initializer { VaultViewModel(container().vault, container().biometricKeys) }
+        initializer { SettingsViewModel(container().vault, container().biometricKeys) }
     }
 }

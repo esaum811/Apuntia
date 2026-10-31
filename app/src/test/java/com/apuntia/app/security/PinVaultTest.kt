@@ -205,6 +205,56 @@ class PinVaultTest {
         }
     }
 
+    @Test
+    fun biometricSealRoundTripOpensTheVault() = runBlocking {
+        val vault = newVault().also { it.createPin("1234") }
+        val blob = vault.encrypt("con huella")
+        assertEquals(null, vault.biometricSeal())
+        vault.enableBiometric { raw -> BiometricSeal(byteArrayOf(1, 2, 3), raw.reversedArray()) }
+        vault.lock()
+        vault.unlockWithBiometric { seal -> seal.blob.reversedArray() }
+        assertEquals(VaultState.UNLOCKED, vault.state.value)
+        assertEquals("con huella", vault.decrypt(blob))
+    }
+
+    @Test
+    fun disablingBiometricRemovesTheSeal() = runBlocking {
+        val vault = newVault().also { it.createPin("1234") }
+        vault.enableBiometric { raw -> BiometricSeal(byteArrayOf(1), raw) }
+        vault.disableBiometric()
+        assertEquals(null, vault.biometricSeal())
+    }
+
+    @Test
+    fun biometricUnlockClearsFailedAttempts() = runBlocking {
+        val vault = newVault().also { it.createPin("1234") }
+        vault.enableBiometric { raw -> BiometricSeal(byteArrayOf(1), raw) }
+        vault.lock()
+        repeat(5) { vault.unlock("0000") }
+        vault.unlockWithBiometric { it.blob }
+        assertEquals(null, vault.finalAttemptsLeft())
+    }
+
+    @Test
+    fun changePinKeepsOldDataReadableAndSwitchesThePin() = runBlocking {
+        val vault = newVault().also { it.createPin("1234") }
+        val blob = vault.encrypt("dato")
+        vault.lock()
+        assertEquals(UnlockResult.Success, vault.changePin("1234", "9876"))
+        assertEquals(VaultState.LOCKED, vault.state.value)
+        assertEquals(UnlockResult.WrongPin(attemptsLeft = 4, willWipe = false), vault.unlock("1234"))
+        assertEquals(UnlockResult.Success, vault.unlock("9876"))
+        assertEquals("dato", vault.decrypt(blob))
+    }
+
+    @Test
+    fun changePinWithWrongCurrentPinChangesNothing() = runBlocking {
+        val vault = newVault().also { it.createPin("1234") }
+        vault.lock()
+        assertEquals(UnlockResult.WrongPin(attemptsLeft = 4, willWipe = false), vault.changePin("0000", "9876"))
+        assertEquals(UnlockResult.Success, vault.unlock("1234"))
+    }
+
     private companion object {
         const val TEST_ITERATIONS = 1_000
     }
@@ -215,6 +265,10 @@ private class FakeStorage : VaultStorage {
     override fun read(key: String): String? = data[key]
     override fun write(values: Map<String, String>): Boolean {
         data += values
+        return true
+    }
+    override fun remove(keys: Set<String>): Boolean {
+        data.keys.removeAll(keys)
         return true
     }
     override fun clear(): Boolean {

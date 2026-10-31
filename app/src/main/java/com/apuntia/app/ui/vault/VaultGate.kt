@@ -25,6 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import com.apuntia.app.ui.components.SecondaryButton
+import com.apuntia.app.ui.common.findActivity
+import androidx.fragment.app.FragmentActivity
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,13 +61,6 @@ import com.apuntia.app.ui.theme.ApuntiaTheme
 import kotlinx.coroutines.delay
 
 private const val TICK_MS = 1_000L
-private const val SECONDS_PER_MINUTE = 60
-
-// Solo deja escribir números del 0 al 9 y como máximo 8.
-private val PinInput = InputTransformation {
-    val text = asCharSequence()
-    if (text.length > PinRules.MAX_LENGTH || !text.all { it in '0'..'9' }) revertAllChanges()
-}
 
 /**
  * Pantalla completa para crear el PIN (la primera vez) o desbloquear las notas confidenciales.
@@ -116,7 +116,32 @@ fun VaultGate(
             stringResource(if (creating) R.string.vault_create_action else R.string.vault_unlock_action),
             onClick = { viewModel.submit(targetId) },
         )
+        if (!creating && state.hasBiometric && isBiometricAvailable(LocalContext.current)) {
+            BiometricButton(viewModel)
+        }
     }
+}
+
+// Ofrece la huella: se muestra sola al entrar, y el botón permite repetirla si se cancela.
+@Composable
+private fun BiometricButton(viewModel: VaultViewModel) {
+    val activity = LocalContext.current.findActivity() as? FragmentActivity ?: return
+    val title = stringResource(R.string.vault_biometric_title)
+    val negative = stringResource(R.string.vault_biometric_negative)
+    val prompt = {
+        viewModel.prepareBiometricCipher()?.let { cipher ->
+            authenticateWithBiometric(activity, cipher, title, negative, onSuccess = viewModel::unlockWithBiometric)
+        }
+        Unit
+    }
+    var prompted by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!prompted) {
+            prompted = true
+            prompt()
+        }
+    }
+    SecondaryButton(stringResource(R.string.vault_biometric_action), onClick = prompt)
 }
 
 @Composable
@@ -156,30 +181,6 @@ private fun WipeWarning(attemptsLeft: Int, hasTarget: Boolean) {
 }
 
 @Composable
-private fun PinField(label: String, state: TextFieldState, autoFocus: Boolean = false) {
-    val scheme = MaterialTheme.colorScheme
-    val focus = remember { FocusRequester() }
-    if (autoFocus) LaunchedEffect(Unit) { focus.requestFocus() }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
-        BasicSecureTextField(
-            state = state,
-            inputTransformation = PinInput,
-            textStyle = MaterialTheme.typography.titleMedium.copy(color = scheme.onBackground),
-            cursorBrush = SolidColor(scheme.onBackground),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
-            modifier = Modifier
-                .fillMaxWidth()
-                .defaultMinSize(minHeight = 60.dp)
-                .background(scheme.surfaceVariant, RoundedCornerShape(18.dp))
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-                .focusRequester(focus)
-                .semantics { contentDescription = label },
-        )
-    }
-}
-
-@Composable
 private fun Message(message: VaultMessage?, waitSeconds: Long, hasTarget: Boolean) {
     val text = when {
         waitSeconds > 0 -> stringResource(R.string.vault_locked_out, formatWait(waitSeconds))
@@ -190,22 +191,3 @@ private fun Message(message: VaultMessage?, waitSeconds: Long, hasTarget: Boolea
         Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
     }
 }
-
-@Composable
-private fun messageText(message: VaultMessage, hasTarget: Boolean): String = when (message) {
-    VaultMessage.InvalidPin ->
-        stringResource(R.string.vault_error_invalid, PinRules.MIN_LENGTH, PinRules.MAX_LENGTH)
-    VaultMessage.PinsDontMatch -> stringResource(R.string.vault_error_mismatch)
-    is VaultMessage.WrongPin -> stringResource(wrongPinRes(message.willWipe, hasTarget), message.attemptsLeft)
-    VaultMessage.Failed -> stringResource(R.string.vault_error_failed)
-}
-
-private fun wrongPinRes(willWipe: Boolean, hasTarget: Boolean): Int = when {
-    !willWipe -> R.string.vault_error_wrong
-    hasTarget -> R.string.vault_error_wrong_note
-    else -> R.string.vault_error_wrong_all
-}
-
-// Segundos a "m:ss", por ejemplo 75 -> "1:15".
-private fun formatWait(seconds: Long): String =
-    "%d:%02d".format(seconds / SECONDS_PER_MINUTE, seconds % SECONDS_PER_MINUTE)

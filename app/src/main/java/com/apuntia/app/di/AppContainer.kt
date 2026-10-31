@@ -12,6 +12,7 @@ import com.apuntia.app.data.repository.RoomReminderRepository
 import com.apuntia.app.domain.repository.CategoryRepository
 import com.apuntia.app.domain.repository.EntryRepository
 import com.apuntia.app.domain.repository.ReminderRepository
+import com.apuntia.app.security.BiometricKeys
 import com.apuntia.app.security.DatabaseKeyProvider
 import com.apuntia.app.security.KeystoreKeyWrapper
 import com.apuntia.app.security.PinVault
@@ -54,6 +55,9 @@ class AppContainer(context: Context) {
             onWipe = { id -> if (id == null) entries.deleteConfidential() else entries.deleteForever(id) },
         )
     }
+
+    /** Llave del teléfono que protege la apertura de la bóveda con huella. */
+    val biometricKeys: BiometricKeys by lazy { BiometricKeys() }
 
     /** Cierra la bóveda cuando la app pasa un rato en segundo plano. */
     val vaultAutoLock: VaultAutoLock by lazy {
