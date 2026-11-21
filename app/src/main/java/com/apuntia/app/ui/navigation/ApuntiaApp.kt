@@ -24,12 +24,12 @@ import com.apuntia.app.ApuntiaApplication
 import com.apuntia.app.R
 import com.apuntia.app.di.DatabaseStatus
 import com.apuntia.app.domain.model.EntryType
+import com.apuntia.app.ui.alarms.AlarmEditorScreen
+import com.apuntia.app.ui.alarms.AlarmsScreen
 import com.apuntia.app.ui.common.StartupErrorScreen
 import com.apuntia.app.ui.components.ApuntiaDock
 import com.apuntia.app.ui.components.ApuntiaIcons
 import com.apuntia.app.ui.components.DockItem
-import com.apuntia.app.ui.alarms.AlarmEditorScreen
-import com.apuntia.app.ui.alarms.AlarmsScreen
 import com.apuntia.app.ui.editor.EditorScreen
 import com.apuntia.app.ui.notes.NotesScreen
 import com.apuntia.app.ui.settings.SettingsScreen
@@ -123,7 +123,9 @@ private fun ApuntiaNavHost(navController: NavHostController) {
                 },
             ),
         ) { AlarmEditorScreen(onClose = { navController.popBackStack() }) }
-        composable(Routes.SETTINGS) { SettingsScreen() }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(onOpenTrash = { navController.navigate(Routes.TRASH) { launchSingleTop = true } })
+        }
         composable(
             Routes.EDITOR,
             arguments = listOf(

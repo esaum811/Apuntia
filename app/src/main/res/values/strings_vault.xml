@@ -40,4 +40,17 @@
     <string name="settings_change_pin_action">Cambiar</string>
     <string name="settings_pin_current">PIN actual</string>
     <string name="settings_pin_new">PIN nuevo</string>
+
+    <string name="settings_tasks">Tareas</string>
+    <string name="settings_cleanup_title">Limpiar tareas hechas</string>
+    <string name="settings_cleanup_never">Nunca</string>
+    <string name="settings_cleanup_7">7 días</string>
+    <string name="settings_cleanup_30">30 días</string>
+    <string name="settings_cleanup_hint">Las tareas hechas pasan a la papelera después de este tiempo. Allí siguen 30 días más antes de borrarse.</string>
+
+    <string name="settings_alarms">Alarmas</string>
+    <string name="settings_sound_title">Sonido por defecto</string>
+    <string name="settings_sound_system">Sonido de alarma del sistema</string>
+    <string name="settings_permissions_title">Permisos de la app</string>
+    <string name="settings_permissions_hint">Si la alarma no aparece con el teléfono bloqueado o en uso, abre aquí los permisos. En Xiaomi activa «Mostrar en pantalla de bloqueo» y «Mostrar ventanas emergentes» en Otros permisos.</string>
 </resources>

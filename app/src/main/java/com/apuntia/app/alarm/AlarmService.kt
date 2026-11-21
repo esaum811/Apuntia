@@ -129,26 +129,39 @@ class AlarmService : Service() {
         stopRinging()
     }
 
+    // Orden de preferencia: sonido de la alarma, sonido por defecto de Apuntia y, al final, el del sistema.
+    // Si el elegido ya no existe o no se puede reproducir, se prueba el siguiente: la alarma nunca debe quedar muda.
     private fun playSound(ringtoneUri: String?) {
-        val uri = ringtoneUri?.let(Uri::parse) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        val container = (applicationContext as ApuntiaApplication).container
+        val systemDefault = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        val candidates = listOfNotNull(ringtoneUri, container.settings.defaultRingtone.value)
+            .map(Uri::parse) + systemDefault
+        candidates.firstOrNull(::startPlayer)
+    }
+
+    private fun startPlayer(uri: Uri): Boolean {
         // Si ya sonaba otra alarma, se libera su reproductor antes de empezar el nuevo.
         player?.release()
+        player = null
+        val candidate = MediaPlayer()
         @Suppress("TooGenericExceptionCaught")
-        try {
-            player = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build(),
-                )
-                setDataSource(this@AlarmService, uri)
-                isLooping = true
-                prepare()
-                start()
-            }
+        return try {
+            candidate.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
+            candidate.setDataSource(this, uri)
+            candidate.isLooping = true
+            candidate.prepare()
+            candidate.start()
+            player = candidate
+            true
         } catch (error: Exception) {
-            Log.e(TAG, "No se pudo reproducir el sonido de la alarma", error)
+            Log.e(TAG, "No se pudo reproducir $uri", error)
+            candidate.release()
+            false
         }
     }
 

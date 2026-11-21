@@ -37,6 +37,9 @@ interface EntryRepository {
     /** Envía a la papelera todas las tareas terminadas. */
     suspend fun moveDoneTasksToTrash()
 
+    /** Envía a la papelera las tareas que llevan terminadas más de [days] días. */
+    suspend fun moveOldDoneTasksToTrash(days: Int)
+
     /** Borra para siempre todo lo que está en la papelera. */
     suspend fun emptyTrash()
 

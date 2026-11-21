@@ -19,12 +19,14 @@ import com.apuntia.app.security.PinVault
 import com.apuntia.app.security.SharedPrefsVaultStorage
 import com.apuntia.app.security.Vault
 import com.apuntia.app.security.VaultAutoLock
+import com.apuntia.app.settings.AppSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val TAG = "Apuntia"
@@ -56,16 +58,23 @@ class AppContainer(context: Context) {
         )
     }
 
+    /** Preferencias de la app (limpieza de tareas hechas y sonido de alarma). */
+    val settings: AppSettings by lazy { AppSettings(appContext) }
+
     /** Llave del teléfono que protege la apertura de la bóveda con huella. */
     val biometricKeys: BiometricKeys by lazy { BiometricKeys() }
 
     /** Cierra la bóveda cuando la app pasa un rato en segundo plano. */
     val vaultAutoLock: VaultAutoLock by lazy {
         // Solo toca la bóveda cuando ya está lista: así no se lee disco en el hilo principal.
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         VaultAutoLock(
             lockAction = { if (status.value == DatabaseStatus.READY) vault.lock() },
-            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-        )
+            scope = scope,
+        ).also { autoLock ->
+            // Se lee fuera del hilo principal y se actualiza cuando el usuario lo cambia en Ajustes.
+            scope.launch { settings.autoLock.collect { autoLock.graceMillis = it.millis } }
+        }
     }
 
     /** Programa y cancela las alarmas en el sistema. */
@@ -93,6 +102,8 @@ class AppContainer(context: Context) {
             vault.lock()
             categories.ensureDefaults()
             entries.purgeOldTrash()
+            // Las preferencias se leen aquí, fuera del hilo principal, la primera vez.
+            settings.doneCleanup.value.days?.let { entries.moveOldDoneTasksToTrash(it) }
             mutableStatus.value = DatabaseStatus.READY
         } catch (error: Exception) {
             Log.e(TAG, "No se pudo abrir la base de datos", error)

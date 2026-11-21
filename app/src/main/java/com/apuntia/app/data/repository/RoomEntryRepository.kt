@@ -49,6 +49,11 @@ class RoomEntryRepository(
 
     override suspend fun moveDoneTasksToTrash() = dao.moveDoneTasksToTrash(clock())
 
+    override suspend fun moveOldDoneTasksToTrash(days: Int) {
+        val now = clock()
+        dao.moveDoneTasksBeforeToTrash(deletedAt = now, before = now - days * MILLIS_PER_DAY)
+    }
+
     override suspend fun emptyTrash() = dao.emptyTrash()
 
     override suspend fun restore(id: String) = dao.restore(id)

@@ -46,6 +46,11 @@ object AppViewModelProvider {
             )
         }
         initializer { VaultViewModel(container().vault, container().biometricKeys) }
-        initializer { SettingsViewModel(container().vault, container().biometricKeys) }
+        initializer { SettingsViewModel(
+                container().vault,
+                container().biometricKeys,
+                container().settings,
+                container().entries,
+            ) }
     }
 }

@@ -52,6 +52,13 @@ interface EntryDao {
     @Query("UPDATE entries SET deletedAt = :deletedAt WHERE type = 'TASK' AND isDone = 1 AND deletedAt IS NULL")
     suspend fun moveDoneTasksToTrash(deletedAt: Long)
 
+    /** Envía a la papelera las tareas terminadas desde antes de [before] que siguen activas. */
+    @Query(
+        "UPDATE entries SET deletedAt = :deletedAt " +
+            "WHERE type = 'TASK' AND isDone = 1 AND deletedAt IS NULL AND updatedAt < :before",
+    )
+    suspend fun moveDoneTasksBeforeToTrash(deletedAt: Long, before: Long)
+
     /** Borra para siempre todo lo que está en la papelera. */
     @Query("DELETE FROM entries WHERE deletedAt IS NOT NULL")
     suspend fun emptyTrash()

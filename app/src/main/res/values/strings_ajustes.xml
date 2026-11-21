@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="prefs_pin_and_biometric">PIN y huella</string>
+    <string name="prefs_on">Activado</string>
+    <string name="prefs_system">Sistema</string>
+    <string name="prefs_auto_lock">Bloqueo automático</string>
+    <string name="prefs_auto_lock_hint">Tiempo que puedes estar fuera de Apuntia antes de que las notas confidenciales vuelvan a pedir el PIN.</string>
+    <string name="prefs_lock_now">Al salir de la app</string>
+    <string name="prefs_lock_30s">30 segundos</string>
+    <string name="prefs_lock_1m">1 minuto</string>
+    <string name="prefs_lock_2m">2 minutos</string>
+    <string name="prefs_lock_5m">5 minutos</string>
+
+    <string name="prefs_save">Guardar</string>
+    <string name="prefs_close">Cerrar</string>
+
+    <string name="prefs_alarm_permission">Permiso de alarmas</string>
+    <string name="prefs_allowed">Permitido</string>
+    <string name="prefs_missing">Falta permitir</string>
+    <string name="prefs_perm_overlay">Mostrar sobre otras apps</string>
+    <string name="prefs_perm_fullscreen">Notificaciones en pantalla completa</string>
+
+    <string name="prefs_appearance">Apariencia</string>
+    <string name="prefs_theme">Tema</string>
+    <string name="prefs_theme_system">Automático</string>
+    <string name="prefs_theme_light">Claro</string>
+    <string name="prefs_theme_dark">Oscuro</string>
+    <string name="prefs_language">Idioma</string>
+    <string name="prefs_language_spanish">Español</string>
+    <string name="prefs_language_hint">Por ahora Apuntia solo está disponible en español.</string>
+
+    <string name="prefs_data">Datos</string>
+    <string name="prefs_trash">Papelera</string>
+    <string name="prefs_cleanup">Limpiar tareas hechas</string>
+    <plurals name="prefs_trash_count">
+        <item quantity="one">%d elemento</item>
+        <item quantity="other">%d elementos</item>
+    </plurals>
+</resources>

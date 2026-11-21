@@ -5,23 +5,33 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.apuntia.app.domain.repository.EntryRepository
 import com.apuntia.app.security.BiometricKeys
 import com.apuntia.app.security.BiometricSeal
 import com.apuntia.app.security.PinRules
 import com.apuntia.app.security.UnlockResult
 import com.apuntia.app.security.Vault
 import com.apuntia.app.security.VaultState
+import com.apuntia.app.settings.AppSettings
+import com.apuntia.app.settings.AutoLock
+import com.apuntia.app.settings.DoneCleanup
+import com.apuntia.app.settings.ThemeMode
+import com.apuntia.app.ui.common.launchSafely
 import com.apuntia.app.ui.vault.VaultMessage
 import java.security.GeneralSecurityException
 import javax.crypto.Cipher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val TAG = "Apuntia"
+private const val STOP_TIMEOUT_MS = 5_000L
 
 /**
  * Diálogo para cambiar el PIN.
@@ -46,10 +56,12 @@ data class SettingsUiState(
     val wipedEverything: Boolean = false,
 )
 
-/** Atiende las opciones de seguridad de Ajustes: huella y cambio de PIN. */
+/** Atiende las opciones de Ajustes: seguridad, alarmas, apariencia y datos. */
 class SettingsViewModel(
     private val vault: Vault,
     private val biometricKeys: BiometricKeys,
+    private val settings: AppSettings,
+    private val entries: EntryRepository,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(currentState())
 
@@ -61,6 +73,38 @@ class SettingsViewModel(
 
     /** Repetición del PIN nuevo. */
     val confirmPinState = TextFieldState()
+
+    /** Cuándo se limpian las tareas hechas. */
+    val doneCleanup: StateFlow<DoneCleanup> = settings.doneCleanup
+
+    /** Sonido de alarma por defecto, o nulo si se usa el del sistema. */
+    val defaultRingtone: StateFlow<String?> = settings.defaultRingtone
+
+    /** Cambia cuándo se limpian las tareas hechas y aplica el cambio de inmediato. */
+    fun setDoneCleanup(option: DoneCleanup) {
+        settings.setDoneCleanup(option)
+        option.days?.let { days -> viewModelScope.launchSafely { entries.moveOldDoneTasksToTrash(days) } }
+    }
+
+    /** Cambia el sonido de alarma por defecto; nulo vuelve al del sistema. */
+    fun setDefaultRingtone(uri: String?) = settings.setDefaultRingtone(uri)
+
+    /** Tema elegido: automático, claro u oscuro. */
+    val theme: StateFlow<ThemeMode> = settings.theme
+
+    /** Cambia el tema de la app. */
+    fun setTheme(mode: ThemeMode) = settings.setTheme(mode)
+
+    /** Tiempo fuera de la app antes de volver a pedir el PIN. */
+    val autoLock: StateFlow<AutoLock> = settings.autoLock
+
+    /** Cambia el tiempo del bloqueo automático. */
+    fun setAutoLock(option: AutoLock) = settings.setAutoLock(option)
+
+    /** Cuántas entradas hay en la papelera. */
+    val trashCount: StateFlow<Int> = entries.observeTrash()
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), 0)
 
     /** Situación de la bóveda. */
     val vaultState: StateFlow<VaultState> = vault.state
